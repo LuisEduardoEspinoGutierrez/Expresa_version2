@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".ejercicios.Ejercicio13">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:background="#38A9F5"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/ivRegresarEje13"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/icon_back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/regresar"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            android:layout_marginStart="12dp"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="15dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ruleta"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textAlignment="center"
+                android:paddingBottom="10dp"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#38A9F5"
+                app:strokeWidth="2dp"
+                app:cardBackgroundColor="#38A9F5">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="15dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Instrucciones"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"/>
+
+                        <Button
+                            android:id="@+id/btnAudioInstruccionesEje13"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Escuchar"
+                            android:textAllCaps="false"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF"
+                            app:icon="@android:drawable/ic_media_play"
+                            app:iconSize="20dp"
+                            app:iconTint="#FFFFFF"
+                            app:iconPadding="10dp"
+                            app:iconGravity="textStart"
+                            android:backgroundTint="#FFA726"
+                            app:cornerRadius="20dp"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="1. Presiona el botón “Girar”. \n2. Escucha la palabra que salió en la ruleta.\n3. Presiona “Grabar” y repite la palabra.\n4. Presiona “Terminar” para guardar tu audio.\n5. Presiona “Subir” para enviar tu grabación.\n6. Repite el juego 5 veces para terminar el ejercicio."
+                        android:textSize="18sp"
+                        android:textColor="@color/white"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginTop="6dp"/>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#38A9F5"
+                app:strokeWidth="2dp"
+                app:cardElevation="6dp"
+                android:layout_marginBottom="20dp"
+                android:layout_marginTop="15dp"
+                app:cardBackgroundColor="#FFFFFF">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="20dp">
+
+                    <FrameLayout
+                        android:layout_width="320dp"
+                        android:layout_height="320dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/ivRuleta"
+                            android:layout_width="300dp"
+                            android:layout_height="300dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/eje13_ruleta"
+                            android:scaleType="fitCenter"/>
+
+                        <ImageView
+                            android:id="@+id/ivFlecha"
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            android:layout_gravity="top|center_horizontal"
+                            android:translationY="-5dp"
+                            android:src="@drawable/eje13_flecha"
+                            android:elevation="10dp"/>
+
+                    </FrameLayout>
+
+                    <Button
+                        android:id="@+id/btnGirar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Girar"
+                        android:layout_marginTop="20dp"
+                        android:backgroundTint="#FFA726"
+                        android:textColor="#FFFFFF"/>
+
+                    <TextView
+                        android:id="@+id/tvResultado"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black"
+                        android:layout_marginTop="20dp"/>
+
+                </LinearLayout>
+
+
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="3"
+        android:padding="8dp"
+        android:layout_marginBottom="6dp">
+
+        <Button
+            android:id="@+id/btnGrabarEje13"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Grabar"
+            android:textAllCaps="false"
+            android:layout_margin="4dp"
+            android:backgroundTint="#38A9F5"
+            android:textColor="#FFFFFF"/>
+
+        <Button
+            android:id="@+id/btnDetenerEje13"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Terminar"
+            android:textAllCaps="false"
+            android:layout_margin="4dp"
+            android:backgroundTint="#757575"
+            android:textColor="#FFFFFF"/>
+
+        <Button
+            android:id="@+id/btnSubirEje13"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Subir"
+            android:textAllCaps="false"
+            android:layout_margin="4dp"
+            android:backgroundTint="#4CAF50"
+            android:textColor="#FFFFFF"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:layout_marginBottom="6dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btnFinalizarEje13"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Finalizar"
+            android:backgroundTint="#38A9F5"
+            android:textColor="#FFFFFF"/>
+
+    </LinearLayout>
+
+</LinearLayout>

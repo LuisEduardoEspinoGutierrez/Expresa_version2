@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/login"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    tools:context=".LoginActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:padding="25dp"
+        tools:context=".LoginActivity">
+
+        <!-- Icono grande de login -->
+        <ImageView
+            android:id="@+id/ivLogin"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="24dp"
+            android:src="@drawable/login"
+            android:scaleType="fitCenter" />
+
+        <!-- Texto principal "Iniciar sesión" -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Iniciar sesión"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Texto de instrucciones -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ingrese los datos para iniciar sesión"
+            android:textSize="18sp"
+            android:textColor="#757575"
+            android:layout_marginBottom="40dp" />
+
+        <!-- PRIMER CAMPO: Usuario -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Iniciar sesión"
+            android:textSize="18sp"
+            android:textColor="@color/black"
+            android:layout_marginBottom="4dp"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            app:startIconDrawable="@drawable/user"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="#38A9F5"
+            app:startIconContentDescription="Icono usuario"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etCorreo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ingresar correo"
+                android:textSize="16sp"
+                android:paddingStart="48dp"
+                android:paddingLeft="48dp"
+                android:paddingVertical="16dp"
+                android:gravity="center_vertical" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- SEGUNDO CAMPO: Contraseña (si lo necesitas) -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Contraseña"
+            android:textSize="18sp"
+            android:textColor="@color/black"
+            android:layout_marginBottom="4dp"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:startIconDrawable="@drawable/lock"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="#38A9F5"
+            app:passwordToggleEnabled="true"
+            app:endIconMode="password_toggle"
+            app:startIconContentDescription="Icono contraseña"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etContrasena"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ingresar contraseña"
+                android:textSize="18sp"
+                android:inputType="textPassword"
+                android:paddingVertical="16dp"
+                android:paddingStart="48dp"
+                android:paddingLeft="48dp" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Botones horizontales -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btnIngresar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Ingresar"
+
+                android:textAllCaps="false"
+                android:layout_margin="8dp"
+                android:backgroundTint="#38A9F5"
+                android:textColor="#FFFFFF"
+                app:cornerRadius="8dp"
+                android:textSize="18sp"
+                android:padding="16dp" />
+
+            <Button
+                android:id="@+id/btnRegistrar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Registrar"
+                android:layout_margin="8dp"
+                android:backgroundTint="#38A9F5"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:padding="16dp"
+                app:cornerRadius="8dp"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

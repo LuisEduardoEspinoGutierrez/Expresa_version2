@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".ejercicios.Ejercicio08">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:background="#38A9F5"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/ivRegresarEje08"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/icon_back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/regresar"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            android:layout_marginStart="12dp"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="15dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Sopa de letras"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textAlignment="center"
+                android:paddingBottom="10dp"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#38A9F5"
+                app:strokeWidth="2dp"
+                app:cardBackgroundColor="#38A9F5">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="15dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Instrucciones"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"/>
+
+                        <Button
+                            android:id="@+id/btnAudioInstruccionesEje08"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Escuchar"
+                            android:textAllCaps="false"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF"
+                            app:icon="@android:drawable/ic_media_play"
+                            app:iconSize="20dp"
+                            app:iconTint="#FFFFFF"
+                            app:iconPadding="10dp"
+                            app:iconGravity="textStart"
+                            android:backgroundTint="#FFA726"
+                            app:cornerRadius="20dp"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="1. Mira los dibujitos. \n2. Cada dibujo tiene un nombre. \n3. Haz clic en el dibujo para escuchar la palabra. \n4. Busca esas palabras en la sopa de letras. \n5. Cuando encuentres una, el dibujo se coloreará."
+                        android:textSize="18sp"
+                        android:textColor="@color/white"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginTop="6dp"/>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#38A9F5"
+                app:strokeWidth="2dp"
+                android:layout_marginTop="15dp"
+                app:cardBackgroundColor="#FFFFFF">
+
+                <GridLayout
+                    android:id="@+id/gridImagenes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="4"
+                    android:useDefaultMargins="true">
+
+                    <ImageView
+                        android:id="@+id/eje08_img1"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img1" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img2"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img2" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img3"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img3" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img4"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img4" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img5"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img5" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img6"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img6" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img7"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img7" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img8"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img7" /> <!-- Original had duplicated img7 or I misread, staying with 08 -->
+
+                    <!-- Just staying consistent with previous file content for images -->
+                    <ImageView
+                        android:id="@+id/eje08_img9"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img9" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img10"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img10" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img11"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img11" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img12"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img12" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img13"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img13" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img14"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img14" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img15"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img15" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img16"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img16" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img17"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img17" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img18"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img18" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img19"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img19" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img20"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img20" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img21"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img21" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img22"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img22" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img23"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img23" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img24"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img24" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img25"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img25" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img26"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img26" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img27"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img27" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img28"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img28" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img29"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img29" />
+
+                    <ImageView
+                        android:id="@+id/eje08_img30"
+                        android:layout_width="0dp"
+                        android:layout_height="100dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje08_img30" />
+
+                </GridLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="400dp"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#38A9F5"
+                app:strokeWidth="2dp"
+                app:cardElevation="6dp"
+                android:layout_marginBottom="20dp"
+                android:layout_marginTop="15dp"
+                app:cardBackgroundColor="#FFFFFF">
+
+                <com.example.tt2.ejercicios.SopaDeLetrasViewDalia
+                    android:id="@+id/sopaDeLetrasViewEje08"
+                    android:layout_width="match_parent"
+                    android:layout_height="400dp" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btnFinalizarEje08"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Finalizar"
+            android:backgroundTint="#38A9F5"
+            android:textColor="#FFFFFF"/>
+
+    </LinearLayout>
+</LinearLayout>

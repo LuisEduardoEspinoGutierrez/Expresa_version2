@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "641792496221",
+    "project_id": "expresa-tt2",
+    "storage_bucket": "expresa-tt2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:641792496221:android:2852fbeb3aa45e9d42b3b4",
+        "android_client_info": {
+          "package_name": "com.example.tt2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9ZEklrFtF3OvB0KURqCG2MGFUfpx2QLI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

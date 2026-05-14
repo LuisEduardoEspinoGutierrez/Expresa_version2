@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">TT2</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_ejercicios">Ejercicios</string>
+    <string name="nav_recompensas">Recompensas</string>
+    <string name="nav_nube">Nube</string>
+    <string name="nav_perfil">perfil</string>
+    <string name="regresar">Regresar</string>
+    <string name="recompensas">Recompensas</string>
+    <string name="personajes_desbloqueados">Personajes desbloqueados</string>
+    <string name="dinosaurio_1">Dinosaurio 1</string>
+    <string name="completa_10_ejercicios_para_desbloquearlo">Completa 10 ejercicios para desbloquearlo</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="sopa_de_letras">Sopa de Letras</string>
+    <string name="escuchar_instrucciones">Escuchar instrucciones</string>
+    <string name="instrucciones_ejercicio10">Encuentra las palabras deslizando tu dedo sobre ellas.</string>
+    <string name="palabras_ejercicio10">Palabras: tractor, trompa, trompeta, matrimonio...</string>
+
+    <string name="ejercicio01_instrucciones"><![CDATA[
+    1. Toca la imagen<br>
+    2. Escucha con atención el sonido<br>
+    3. Elige los que tienen R<br>
+    4. ¡Si eliges correctamente el dibujo se coloreara!
+    ]]></string>
+    <string name="ejercicio08_instrucciones"><![CDATA[
+    1. Observa los dibujos<br>
+    2. Busca en la sopa de letras el nombre de cada dibujo<br>
+    3. Selecciona las letras que forman cada palabra<br>
+    4. Escribe las palabras encontradas debajo de la sopa de letras
+    ]]></string>
+    <string name="ejercicio_de_pronunciacion_01">Ejercicio de pronunciación</string>
+
+</resources>

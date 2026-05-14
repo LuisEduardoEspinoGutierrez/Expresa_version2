@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TT2">
+        <activity
+            android:name=".ejercicios.Ejercicio14"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio13"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio15Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio12"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio11Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio10Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio09"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio08"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio7_4Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio7_3Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio7_2Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio7_1Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio06_5"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio06_4"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio06_3"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio06_2"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio06_1"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio05"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio4Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio3Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio2Activity"
+            android:exported="false" />
+        <activity
+            android:name=".ejercicios.Ejercicio01"
+            android:exported="false" />
+        <activity
+            android:name=".RegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

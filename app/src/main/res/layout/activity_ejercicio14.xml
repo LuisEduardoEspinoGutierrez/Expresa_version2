@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".ejercicios.Ejercicio14">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:background="#38A9F5"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/ivRegresarEje14"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/icon_back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/regresar"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            android:layout_marginStart="12dp"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="15dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Relaciona"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textAlignment="center"
+                android:paddingBottom="10dp"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#38A9F5"
+                app:strokeWidth="2dp"
+                app:cardBackgroundColor="#38A9F5">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="15dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Instrucciones"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"/>
+
+                        <Button
+                            android:id="@+id/btnAudioInstruccionesEje14"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Escuchar"
+                            android:textAllCaps="false"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF"
+                            app:icon="@android:drawable/ic_media_play"
+                            app:iconSize="20dp"
+                            app:iconTint="#FFFFFF"
+                            app:iconPadding="10dp"
+                            app:iconGravity="textStart"
+                            android:backgroundTint="#FFA726"
+                            app:cornerRadius="20dp"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="1. Observa las sílabas ra, re, ri, ro y ru.\n2. Presiona las sílabas para escuchar cómo suenan.\n3. Presiona las imágenes para escuchar sus nombres.\n3. Arrastra la imagen correcta frente a cada sílaba.\n4. Si es correcta, desaparecerá.\n5. Si no es correcta, inténtalo otra vez."
+                        android:textSize="18sp"
+                        android:textColor="@color/white"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginTop="6dp"/>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#38A9F5"
+                app:strokeWidth="2dp"
+                app:cardElevation="6dp"
+                android:layout_marginBottom="20dp"
+                android:layout_marginTop="15dp"
+                app:cardBackgroundColor="#FFFFFF">
+
+                <GridLayout
+                    android:id="@+id/gridImagenes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="4"
+                    android:padding="8dp"
+                    android:useDefaultMargins="true">
+
+                    <!--Silaba ra-->
+                    <ImageView
+                        android:id="@+id/eje14_ra"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_ra"/>
+                    <ImageView
+                        android:id="@+id/eje14_esfera"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_esfera"/>
+                    <ImageView
+                        android:id="@+id/eje14_raton"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_raton"/>
+                    <ImageView
+                        android:id="@+id/eje14_pez"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_pez"/>
+
+                    <!--Silaba re-->
+                    <ImageView
+                        android:id="@+id/eje14_re"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_re"/>
+                    <ImageView
+                        android:id="@+id/eje14_reloj"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_reloj"/>
+                    <ImageView
+                        android:id="@+id/eje14_telefono"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_telefono"/>
+                    <ImageView
+                        android:id="@+id/eje14_taza"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_taza"/>
+
+                    <!--Silaba ri-->
+                    <ImageView
+                        android:id="@+id/eje14_ri"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_ri"/>
+                    <ImageView
+                        android:id="@+id/eje14_pico"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_pico"/>
+                    <ImageView
+                        android:id="@+id/eje14_mariquita"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_mariquita"/>
+                    <ImageView
+                        android:id="@+id/eje14_emoji"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_emoji"/>
+
+                    <!--Silaba ro-->
+                    <ImageView
+                        android:id="@+id/eje14_ro"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_ro"/>
+                    <ImageView
+                        android:id="@+id/eje14_robot"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_robot"/>
+                    <ImageView
+                        android:id="@+id/eje14_sombrero"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_sombrero"/>
+                    <ImageView
+                        android:id="@+id/eje14_carta"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_carta"/>
+
+                    <!--Silaba ru-->
+                    <ImageView
+                        android:id="@+id/eje14_ru"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_ru"/>
+                    <ImageView
+                        android:id="@+id/eje14_burro"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_burro"/>
+                    <ImageView
+                        android:id="@+id/eje14_pajaro"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_pajarito"/>
+                    <ImageView
+                        android:id="@+id/eje14_rueda"
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_columnWeight="1"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/eje14_rueda"/>
+
+                </GridLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:layout_marginBottom="6dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btnFinalizarEje14"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Finalizar"
+            android:backgroundTint="#38A9F5"
+            android:textColor="#FFFFFF"/>
+
+    </LinearLayout>
+</LinearLayout>

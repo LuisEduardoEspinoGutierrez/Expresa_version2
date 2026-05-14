@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F7FA"
+    tools:context=".ejercicios.Ejercicio11Activity">
+
+    <!-- BARRA SUPERIOR -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:background="#38A9F5"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/ivRegresar"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/back"
+            android:contentDescription="@string/regresar"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/regresar"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            android:layout_marginStart="12dp"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:animateLayoutChanges="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sopa de Letras"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"
+                android:layout_marginBottom="10dp"/>
+
+            <!-- TARJETA INSTRUCCIONES -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#38A9F5">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <!-- Encabezado -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Instrucciones"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"/>
+
+                        <Button
+                            android:id="@+id/btnAudioInstrucciones"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Escuchar"
+                            android:textAllCaps="false"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF"
+                            app:icon="@android:drawable/ic_media_play"
+                            app:iconSize="20dp"
+                            app:iconTint="#FFFFFF"
+                            app:iconPadding="10dp"
+                            app:iconGravity="textStart"
+                            android:backgroundTint="#FFA726"
+                            app:cornerRadius="20dp"/>
+                    </LinearLayout>
+
+                    <!-- TEXTO INSTRUCCIONES -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Encuentra las palabras deslizando tu dedo sobre ellas en la cuadrícula."
+                        android:textSize="16sp"
+                        android:textColor="@color/white"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginTop="6dp"/>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- TABLERO -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="380dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="6dp"
+                android:layout_marginBottom="20dp"
+                app:cardBackgroundColor="#FFFFFF">
+
+                <com.example.tt2.ejercicios.SopaDeLetrasView
+                    android:id="@+id/sopaDeLetrasView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </androidx.cardview.widget.CardView>
+
+            <!-- PALABRAS -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Palabras a encontrar:"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#2C3E50"
+                android:layout_marginBottom="12dp"/>
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupPalabras"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:chipSpacingHorizontal="8dp"
+                app:chipSpacingVertical="4dp"
+                android:gravity="center"
+                android:animateLayoutChanges="true">
+
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_frasco" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRASCO" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_frio" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRIO" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_fresa" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRESA" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_frambuesa" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRAMBUESA" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_fruta" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRUTA" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_cofre" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="COFRE" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_fraude" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRAUDE" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_refresco" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="REFRESCO" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_disfraz" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISFRAZ" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_africa" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AFRICA" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_frente" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRENTE" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_fraccion" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRACCION" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_frotar" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FROTAR" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_frutero" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRUTERO" app:chipBackgroundColor="#EBF5FB"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Action" android:id="@+id/chip_franela" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRANELA" app:chipBackgroundColor="#EBF5FB"/>
+
+            </com.google.android.material.chip.ChipGroup>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btnFinalizarEje11"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Finalizar"
+            android:backgroundTint="#38A9F5"
+            android:textColor="#FFFFFF"/>
+
+    </LinearLayout>
+
+</LinearLayout>
