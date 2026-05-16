@@ -1,8 +1,10 @@
 package com.example.tt2.ejercicios;
 
+import android.app.AlertDialog;
 import android.graphics.RectF;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -10,25 +12,38 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.tt2.R;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class Ejercicio12 extends AppCompatActivity implements View.OnClickListener {
 
+    private static final String TAG = "Ejercicio12";
     ImageView ivRegresarEje12, eje12_imgR;
     ImageView eje12_img1, eje12_img2, eje12_img3, eje12_img4, eje12_img5, eje12_img6, eje12_img7, eje12_img8, eje12_img9, eje12_img10;
     Button btnAudioInstruccionesEje12, btnFinalizarEje12;
     FlechaConexionView flechaView;
     MediaPlayer mp;
     private MediaPlayer mediaPlayerInstrucciones;
+
+    private String usuarioID;
+    private final String numeroEjercicio = "12";
+    private FirebaseFirestore db;
 
     Set<String> correctas = new HashSet<>(Arrays.asList(
             "img1", // regalo
@@ -58,6 +73,14 @@ public class Ejercicio12 extends AppCompatActivity implements View.OnClickListen
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_ejercicio12);
+
+        db = FirebaseFirestore.getInstance();
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+            usuarioID = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        } else {
+            usuarioID = "anonimo";
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -87,11 +110,11 @@ public class Ejercicio12 extends AppCompatActivity implements View.OnClickListen
         flechaView.setOnConexionListener(new FlechaConexionView.OnConexionListener() {
             @Override
             public void onConectado(String id) {
-
                 if (correctas.contains(id)) {
-                    flechaView.confirmarLinea(); // 👈 guardar línea
+                    flechaView.confirmarLinea();
                     Toast.makeText(Ejercicio12.this, "¡Correcto!", Toast.LENGTH_SHORT).show();
                     reproducirAudios(R.raw.muy_bien);
+                    guardarProgreso();
                 } else {
                     Toast.makeText(Ejercicio12.this, "Inténtalo de nuevo", Toast.LENGTH_SHORT).show();
                     reproducirAudios(R.raw.intentalo_otra_vez);
@@ -146,8 +169,86 @@ public class Ejercicio12 extends AppCompatActivity implements View.OnClickListen
         eje12_img8.setOnClickListener(this);
         eje12_img9.setOnClickListener(this);
         eje12_img10.setOnClickListener(this);
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                mostrarConfirmacionSalida();
+            }
+        });
+
+        cargarProgreso();
     }
 
+    private void cargarProgreso() {
+        if (usuarioID.equals("anonimo")) return;
+        db.collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        List<String> conectados = (List<String>) documentSnapshot.get("conectados");
+                        List<Map<String, Double>> lineasMap = (List<Map<String, Double>>) documentSnapshot.get("lineas");
+                        
+                        if (conectados != null && lineasMap != null) {
+                            Set<String> conectadosSet = new HashSet<>(conectados);
+                            List<float[]> lineasFloat = new ArrayList<>();
+                            for (Map<String, Double> m : lineasMap) {
+                                lineasFloat.add(new float[]{
+                                        m.get("x1").floatValue(),
+                                        m.get("y1").floatValue(),
+                                        m.get("x2").floatValue(),
+                                        m.get("y2").floatValue()
+                                });
+                            }
+                            flechaView.restaurarEstado(conectadosSet, lineasFloat);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error cargando progreso", e));
+    }
+
+    private void guardarProgreso() {
+        if (usuarioID.equals("anonimo")) return;
+        
+        Set<String> conectados = flechaView.getYaConectados();
+        List<float[]> lineas = flechaView.getLineasConfirmadas();
+        int porcentaje = (conectados.size() * 100) / correctas.size();
+
+        List<Map<String, Float>> lineasMap = new ArrayList<>();
+        for (float[] l : lineas) {
+            Map<String, Float> m = new HashMap<>();
+            m.put("x1", l[0]); m.put("y1", l[1]);
+            m.put("x2", l[2]); m.put("y2", l[3]);
+            lineasMap.add(m);
+        }
+
+        Map<String, Object> progreso = new HashMap<>();
+        progreso.put("idPaciente", usuarioID);
+        progreso.put("logicalId", numeroEjercicio);
+        progreso.put("porcentaje", porcentaje);
+        progreso.put("conectados", new ArrayList<>(conectados));
+        progreso.put("lineas", lineasMap);
+        progreso.put("completado", porcentaje == 100);
+
+        db.collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .set(progreso, SetOptions.merge())
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Progreso guardado"))
+                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar progreso", e));
+    }
+
+    private void mostrarConfirmacionSalida() {
+        new AlertDialog.Builder(this)
+                .setTitle("¿Quieres salir?")
+                .setMessage("Tu progreso se guardará automáticamente.")
+                .setPositiveButton("Sí", (dialog, which) -> {
+                    guardarProgreso();
+                    finish();
+                })
+                .setNegativeButton("No", null)
+                .show();
+    }
 
     private void reproducirAudios(int... audios) {
         if (mp != null) {
@@ -159,57 +260,45 @@ public class Ejercicio12 extends AppCompatActivity implements View.OnClickListen
     }
 
     private void configurarDrag(ImageView img, String id) {
-
         img.setOnTouchListener(new View.OnTouchListener() {
-
             float downX, downY;
             boolean isDragging = false;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-
                 int[] location = new int[2];
                 flechaView.getLocationOnScreen(location);
-
                 float x = event.getRawX() - location[0];
                 float y = event.getRawY() - location[1];
 
                 switch (event.getAction()) {
-
                     case MotionEvent.ACTION_DOWN:
                         downX = event.getRawX();
                         downY = event.getRawY();
                         isDragging = false;
-
                         flechaView.iniciarArrastre(id, x, y);
                         return true;
-
                     case MotionEvent.ACTION_MOVE:
-
                         float dx = Math.abs(event.getRawX() - downX);
                         float dy = Math.abs(event.getRawY() - downY);
-
                         if (dx > 20 || dy > 20) {
                             isDragging = true;
                             flechaView.moverArrastre(x, y);
                         }
                         return true;
-
                     case MotionEvent.ACTION_UP:
-
                         if (isDragging) {
                             flechaView.terminarArrastre(x, y);
                         } else {
-                            // 👇 CLICK normal
                             v.performClick();
                         }
                         return true;
                 }
-
                 return false;
             }
         });
     }
+
     private void reproducirSecuencia(int[] audios, int index) {
         mp = MediaPlayer.create(this, audios[index]);
         if (mp == null) return;
@@ -226,7 +315,7 @@ public class Ejercicio12 extends AppCompatActivity implements View.OnClickListen
     @Override
     public void onClick(View v) {
         if (v.getId() == R.id.ivRegresarEje12) {
-            finish();
+            mostrarConfirmacionSalida();
         } else if (v.getId() == R.id.btnAudioInstruccionesEje12) {
             if (mediaPlayerInstrucciones != null) {
                 if (mediaPlayerInstrucciones.isPlaying()) {
@@ -240,48 +329,35 @@ public class Ejercicio12 extends AppCompatActivity implements View.OnClickListen
             int totalConectadas = flechaView.getYaConectados().size();
 
             if (totalConectadas == totalCorrectas) {
+                guardarProgreso();
                 Toast.makeText(this, "¡Ejercicio completado!", Toast.LENGTH_LONG).show();
                 reproducirAudios(R.raw.felicidades);
-                // Opcional: cerrar pantalla
                 finish();
-
             } else {
-
                 Toast.makeText(this, "Aún faltan palabras", Toast.LENGTH_SHORT).show();
                 reproducirAudios(R.raw.no_has_terminado);
             }
-        } else if (v.getId() == R.id.eje12_imgR)
-        {
+        } else if (v.getId() == R.id.eje12_imgR) {
             reproducirAudios(R.raw.r);
-        } else if (v.getId() == R.id.eje12_img1)
-        {
+        } else if (v.getId() == R.id.eje12_img1) {
             reproducirAudios(R.raw.audio_img1_eje12);
-        } else if (v.getId() == R.id.eje12_img2)
-        {
+        } else if (v.getId() == R.id.eje12_img2) {
             reproducirAudios(R.raw.audio_img2_eje12);
-        } else if (v.getId() == R.id.eje12_img3)
-        {
+        } else if (v.getId() == R.id.eje12_img3) {
             reproducirAudios(R.raw.audio_img3_eje12);
-        } else if (v.getId() == R.id.eje12_img4)
-        {
+        } else if (v.getId() == R.id.eje12_img4) {
             reproducirAudios(R.raw.audio_img4_eje12);
-        } else if (v.getId() == R.id.eje12_img5)
-        {
+        } else if (v.getId() == R.id.eje12_img5) {
             reproducirAudios(R.raw.audio_img5_eje12);
-        } else if (v.getId() == R.id.eje12_img6)
-        {
+        } else if (v.getId() == R.id.eje12_img6) {
             reproducirAudios(R.raw.audio_img6_eje12);
-        } else if (v.getId() == R.id.eje12_img7)
-        {
+        } else if (v.getId() == R.id.eje12_img7) {
             reproducirAudios(R.raw.audio_img7_eje12);
-        } else if (v.getId() == R.id.eje12_img8)
-        {
+        } else if (v.getId() == R.id.eje12_img8) {
             reproducirAudios(R.raw.audio_img8_eje12);
-        } else if (v.getId() == R.id.eje12_img9)
-        {
+        } else if (v.getId() == R.id.eje12_img9) {
             reproducirAudios(R.raw.audio_img9_eje12);
-        } else if (v.getId() == R.id.eje12_img10)
-        {
+        } else if (v.getId() == R.id.eje12_img10) {
             reproducirAudios(R.raw.audio_img10_eje12);
         }
     }

@@ -3,6 +3,7 @@ package com.example.tt2.ejercicios;
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
+import android.app.AlertDialog;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
@@ -17,6 +18,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,14 +29,19 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.tt2.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class Ejercicio13 extends AppCompatActivity implements View.OnClickListener {
 
+    private static final String TAG = "Ejercicio13";
     int totalGiros = 0;
     int totalGrabaciones = 0;
     boolean audioGrabado = false;
@@ -55,6 +62,7 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
     String filePath;
     private String usuarioID;
     private final String numeroEjercicio = "13";
+    private FirebaseFirestore db;
     int contadorIntentos = 0;
     boolean palabraGenerada = false;
 
@@ -83,6 +91,7 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_ejercicio13);
 
+        db = FirebaseFirestore.getInstance();
         // Usuario actual
         usuarioID = FirebaseAuth.getInstance().getCurrentUser() != null
                 ? FirebaseAuth.getInstance().getCurrentUser().getUid()
@@ -133,6 +142,74 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
         // Configurar MediaPlayer para instrucciones
         mediaPlayerInstrucciones = MediaPlayer.create(this, R.raw.instrucciones_eje13);
         btnAudioInstruccionesEje13.setOnClickListener(this);
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                mostrarConfirmacionSalida();
+            }
+        });
+
+        cargarProgreso();
+    }
+
+    private void cargarProgreso() {
+        if (usuarioID.equals("anonimo")) return;
+
+        db.collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Long giros = documentSnapshot.getLong("totalGiros");
+                        Long grabaciones = documentSnapshot.getLong("totalGrabaciones");
+                        Long intentos = documentSnapshot.getLong("contadorIntentos");
+
+                        if (giros != null) totalGiros = giros.intValue();
+                        if (grabaciones != null) totalGrabaciones = grabaciones.intValue();
+                        if (intentos != null) contadorIntentos = intentos.intValue();
+
+                        validarFinalizacion();
+                        if (contadorIntentos >= 7) {
+                            btnGirar.setEnabled(false);
+                            tvResultado.setText("Retoma el ejercicio girando");
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error cargando progreso", e));
+    }
+
+    private void guardarProgreso() {
+        if (usuarioID.equals("anonimo")) return;
+
+        int porcentaje = (Math.min(totalGrabaciones, 7) * 100) / 7;
+
+        Map<String, Object> progreso = new HashMap<>();
+        progreso.put("idPaciente", usuarioID);
+        progreso.put("logicalId", numeroEjercicio);
+        progreso.put("porcentaje", porcentaje);
+        progreso.put("totalGiros", totalGiros);
+        progreso.put("totalGrabaciones", totalGrabaciones);
+        progreso.put("contadorIntentos", contadorIntentos);
+        progreso.put("completado", porcentaje == 100);
+
+        db.collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .set(progreso, SetOptions.merge())
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Progreso guardado"))
+                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar progreso", e));
+    }
+
+    private void mostrarConfirmacionSalida() {
+        new AlertDialog.Builder(this)
+                .setTitle("¿Quieres salir?")
+                .setMessage("Tu progreso se guardará automáticamente.")
+                .setPositiveButton("Sí", (dialog, which) -> {
+                    guardarProgreso();
+                    finish();
+                })
+                .setNegativeButton("No", null)
+                .show();
     }
 
     private void reproducirAudios(int... audios) {
@@ -184,6 +261,7 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
             @Override
             public void onAnimationEnd(Animator animation) {
                 detectarSeccion(currentRotation);
+                guardarProgreso();
             }
 
             @Override
@@ -257,8 +335,6 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
 
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            
-            // CONFIGURACIÓN AAC / MPEG_4
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             recorder.setAudioSamplingRate(44100);
@@ -272,7 +348,7 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
             btnDetenerEje13.setEnabled(true);
             btnSubirEje13.setEnabled(false);
 
-            Toast.makeText(this, "Grabando en alta calidad...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Grabando...", Toast.LENGTH_SHORT).show();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -294,16 +370,17 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
                 audioGrabado = true;
                 totalGrabaciones++;
                 validarFinalizacion();
+                guardarProgreso();
 
                 if (contadorIntentos >= 7) {
                     btnGirar.setEnabled(false);
                     btnGrabarEje13.setEnabled(false);
                     tvResultado.setText("Ejercicio terminado");
-                    Toast.makeText(this, "Has alcanzado el límite de intentos sugeridos", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Has alcanzado el límite de intentos", Toast.LENGTH_LONG).show();
                 } else {
                     btnGirar.setEnabled(true);
                     btnGrabarEje13.setEnabled(false);
-                    Toast.makeText(this, "Grabación guardada ✓. Intento " + contadorIntentos, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Grabación guardada ✓", Toast.LENGTH_SHORT).show();
                 }
             }
         } catch (Exception e) {
@@ -333,12 +410,10 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
                 .addOnSuccessListener(taskSnapshot -> {
                     ref.getDownloadUrl().addOnSuccessListener(uri -> {
                         Toast.makeText(this, "Audio subido correctamente ✓", Toast.LENGTH_SHORT).show();
-                        Log.d("EJERCICIO_13", "URL: " + uri.toString());
                     });
                 })
                 .addOnFailureListener(e -> {
-                    Log.e("EJERCICIO_13", "Error al subir", e);
-                    Toast.makeText(this, "Error al subir: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Error al subir", Toast.LENGTH_LONG).show();
                     btnSubirEje13.setEnabled(true);
                 });
     }
@@ -346,14 +421,13 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
     private void validarFinalizacion() {
         if (totalGiros >= 7 && totalGrabaciones >= 7) {
             btnFinalizarEje13.setEnabled(true);
-            Toast.makeText(this, "¡Ya puedes finalizar!", Toast.LENGTH_LONG).show();
         }
     }
 
     @Override
     public void onClick(View v) {
         if (v.getId() == R.id.ivRegresarEje13) {
-            finish();
+            mostrarConfirmacionSalida();
         } else if (v.getId() == R.id.btnAudioInstruccionesEje13) {
             if (mediaPlayerInstrucciones != null) {
                 if (mediaPlayerInstrucciones.isPlaying()) {
@@ -384,7 +458,8 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
             uploadAudio();
         } else if (v.getId() == R.id.btnFinalizarEje13) {
             if (totalGiros >= 7 && totalGrabaciones >= 7) {
-                Toast.makeText(this, "Ejercicio completado", Toast.LENGTH_LONG).show();
+                guardarProgreso();
+                Toast.makeText(this, "¡Ejercicio completado!", Toast.LENGTH_LONG).show();
                 finish();
             } else {
                 Toast.makeText(this, "Debes completar al menos 7 giros y grabaciones", Toast.LENGTH_LONG).show();

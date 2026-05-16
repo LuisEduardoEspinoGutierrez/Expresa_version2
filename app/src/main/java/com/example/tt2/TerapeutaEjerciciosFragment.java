@@ -91,7 +91,6 @@ public class TerapeutaEjerciciosFragment extends Fragment {
     }
 
     private void cargarEjerciciosAsignadosANinos() {
-        // Quitamos orderBy para evitar error de índices
         db.collection("pacientes_ejercicios")
                 .whereEqualTo("idTerapeuta", currentUserId)
                 .addSnapshotListener((value, error) -> {
@@ -106,15 +105,18 @@ public class TerapeutaEjerciciosFragment extends Fragment {
                             asig.documentId = doc.getId();
                             listaAsignacionesPacientes.add(asig);
                         }
-                        // Ordenar localmente
-                        Collections.sort(listaAsignacionesPacientes, (a, b) -> Long.compare(b.fechaAsignacion, a.fechaAsignacion));
+                        // Ordenar por nombre de paciente y luego por número de ejercicio
+                        Collections.sort(listaAsignacionesPacientes, (a, b) -> {
+                            int nameComp = a.nombrePaciente.compareTo(b.nombrePaciente);
+                            if (nameComp != 0) return nameComp;
+                            return compareLogicalIds(a.logicalId, b.logicalId);
+                        });
                     }
                     asignacionesAdapter.notifyDataSetChanged();
                 });
     }
 
     private void cargarMisEjerciciosDisponibles() {
-        // Quitamos orderBy para evitar error de índices
         db.collection("ejercicios_asignados")
                 .whereEqualTo("idTerapeuta", currentUserId)
                 .addSnapshotListener((value, error) -> {
@@ -128,11 +130,33 @@ public class TerapeutaEjerciciosFragment extends Fragment {
                             AsignacionAdmin eje = doc.toObject(AsignacionAdmin.class);
                             listaDisponibles.add(eje);
                         }
-                        // Ordenar localmente
-                        Collections.sort(listaDisponibles, (a, b) -> Long.compare(b.fechaAsignacion, a.fechaAsignacion));
+                        // Ordenar numéricamente por logicalId
+                        Collections.sort(listaDisponibles, (a, b) -> compareLogicalIds(a.logicalId, b.logicalId));
                     }
                     catalogAdapter.notifyDataSetChanged();
                 });
+    }
+
+    private int compareLogicalIds(String l1, String l2) {
+        if (l1 == null || l2 == null) return 0;
+        try {
+            String[] p1 = l1.split("_");
+            String[] p2 = l2.split("_");
+            
+            int n1 = Integer.parseInt(p1[0]);
+            int n2 = Integer.parseInt(p2[0]);
+            
+            if (n1 != n2) {
+                return Integer.compare(n1, n2);
+            }
+            
+            int sub1 = (p1.length > 1) ? Integer.parseInt(p1[1]) : 0;
+            int sub2 = (p2.length > 1) ? Integer.parseInt(p2[1]) : 0;
+            
+            return Integer.compare(sub1, sub2);
+        } catch (Exception e) {
+            return l1.compareTo(l2);
+        }
     }
 
     private void mostrarDialogoPacientes(String logicalId, String nombreEje) {
@@ -217,7 +241,7 @@ public class TerapeutaEjerciciosFragment extends Fragment {
         public void onBindViewHolder(@NonNull ViewHolder h, int pos) {
             AsignacionAdmin eje = mData.get(pos);
             h.tvNom.setText(eje.nombreEjercicio);
-            h.tvNum.setText("Ejercicio " + eje.logicalId);
+            h.tvNum.setText("Ejercicio " + eje.logicalId.replace("_", "."));
             h.btnAsig.setText("Asignar a Niño");
             h.btnAsig.setOnClickListener(v -> mostrarDialogoPacientes(eje.logicalId, eje.nombreEjercicio));
         }
@@ -248,7 +272,7 @@ public class TerapeutaEjerciciosFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull ViewHolder h, int pos) {
             AsignacionPaciente asig = mData.get(pos);
-            h.tvEje.setText(asig.nombreEjercicio);
+            h.tvEje.setText(asig.nombreEjercicio + " (" + asig.logicalId.replace("_", ".") + ")");
             h.tvPac.setText("Niño: " + asig.nombrePaciente);
             h.btnQuit.setOnClickListener(v -> desasignarEjercicioPaciente(asig.documentId, asig.nombrePaciente));
         }

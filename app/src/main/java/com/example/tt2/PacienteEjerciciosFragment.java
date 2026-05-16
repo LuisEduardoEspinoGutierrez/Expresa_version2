@@ -1,5 +1,6 @@
 package com.example.tt2;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,6 +15,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,7 +26,9 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Fragmento que muestra la lista de ejercicios asignados al Paciente (Niño)
@@ -35,6 +39,7 @@ public class PacienteEjerciciosFragment extends Fragment {
     private RecyclerView rvEjercicios;
     private EjerciciosPacienteAdapter adapter;
     private List<AsignacionPaciente> listaEjercicios;
+    private Map<String, Integer> mapaProgreso; // logicalId -> porcentaje
     private FirebaseFirestore db;
     private String currentUserId;
 
@@ -54,6 +59,7 @@ public class PacienteEjerciciosFragment extends Fragment {
         } else {
             currentUserId = "anonimo";
         }
+        mapaProgreso = new HashMap<>();
     }
 
     @Override
@@ -73,22 +79,39 @@ public class PacienteEjerciciosFragment extends Fragment {
             adapter = new EjerciciosPacienteAdapter(listaEjercicios);
             rvEjercicios.setAdapter(adapter);
             cargarEjerciciosAsignados();
+            escucharProgreso();
         }
+    }
+
+    private void escucharProgreso() {
+        if (currentUserId.equals("anonimo")) return;
+
+        db.collection("progreso_ejercicios")
+                .whereEqualTo("idPaciente", currentUserId)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) return;
+                    if (value != null) {
+                        mapaProgreso.clear();
+                        for (QueryDocumentSnapshot doc : value) {
+                            String logId = doc.getString("logicalId");
+                            Long porcentaje = doc.getLong("porcentaje");
+                            if (logId != null && porcentaje != null) {
+                                mapaProgreso.put(logId, porcentaje.intValue());
+                            }
+                        }
+                        if (adapter != null) adapter.notifyDataSetChanged();
+                    }
+                });
     }
 
     private void cargarEjerciciosAsignados() {
         if (currentUserId.equals("anonimo")) return;
 
-        // Quitamos el orderBy de la consulta de Firestore para evitar errores de índices.
-        // El ordenamiento lo hacemos localmente abajo.
         db.collection("pacientes_ejercicios")
                 .whereEqualTo("idPaciente", currentUserId)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
                         Log.e("FIRESTORE_PACIENTE", "Error al cargar ejercicios: " + error.getMessage());
-                        if (isAdded()) {
-                            Toast.makeText(getContext(), "Error al conectar con la base de datos", Toast.LENGTH_SHORT).show();
-                        }
                         return;
                     }
 
@@ -98,8 +121,6 @@ public class PacienteEjerciciosFragment extends Fragment {
                             AsignacionPaciente asig = doc.toObject(AsignacionPaciente.class);
                             listaEjercicios.add(asig);
                         }
-                        
-                        // Ordenar localmente por fechaAsignacion descendente (más recientes primero)
                         Collections.sort(listaEjercicios, (o1, o2) -> Long.compare(o2.fechaAsignacion, o1.fechaAsignacion));
                     }
                     
@@ -109,7 +130,6 @@ public class PacienteEjerciciosFragment extends Fragment {
                 });
     }
 
-    // Adapter para la lista de ejercicios del niño
     private class EjerciciosPacienteAdapter extends RecyclerView.Adapter<EjerciciosPacienteAdapter.ViewHolder> {
         private List<AsignacionPaciente> mData;
 
@@ -129,8 +149,20 @@ public class PacienteEjerciciosFragment extends Fragment {
             AsignacionPaciente asig = mData.get(position);
             holder.tvNombre.setText(asig.nombreEjercicio);
             holder.tvId.setText("Código: " + asig.logicalId);
-            holder.btnRealizar.setText("Comenzar");
-            holder.btnRealizar.setOnClickListener(v -> abrirEjercicio(asig.logicalId));
+            
+            int progreso = mapaProgreso.getOrDefault(asig.logicalId, 0);
+            holder.pbProgreso.setProgress(progreso);
+            holder.tvPorcentaje.setText(progreso + "%");
+
+            if (progreso == 100) {
+                holder.btnRealizar.setText("Completado");
+            } else if (progreso > 0) {
+                holder.btnRealizar.setText("Continuar");
+            } else {
+                holder.btnRealizar.setText("Comenzar");
+            }
+
+            holder.btnRealizar.setOnClickListener(v -> manejarClickEjercicio(asig.logicalId, progreso));
         }
 
         @Override
@@ -139,16 +171,47 @@ public class PacienteEjerciciosFragment extends Fragment {
         }
 
         public class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvNombre, tvId;
+            TextView tvNombre, tvId, tvPorcentaje;
             Button btnRealizar;
+            ProgressBar pbProgreso;
 
             public ViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvNombre = itemView.findViewById(R.id.tvNombreEjercicio);
                 tvId = itemView.findViewById(R.id.tvIdEjercicio);
                 btnRealizar = itemView.findViewById(R.id.btnAbrirEjercicio);
+                pbProgreso = itemView.findViewById(R.id.pbProgresoEjercicio);
+                tvPorcentaje = itemView.findViewById(R.id.tvPorcentajeProgreso);
             }
         }
+    }
+
+    private void manejarClickEjercicio(String logicalId, int progreso) {
+        if (progreso == 100) {
+            new AlertDialog.Builder(getContext())
+                    .setTitle("Ejercicio Terminado")
+                    .setMessage("Ya has completado este ejercicio. ¿Quieres volver a hacerlo?")
+                    .setPositiveButton("Sí", (dialog, which) -> {
+                        reiniciarYAbrir(logicalId);
+                    })
+                    .setNegativeButton("No", null)
+                    .show();
+        } else {
+            abrirEjercicio(logicalId);
+        }
+    }
+
+    private void reiniciarYAbrir(String logicalId) {
+        if (currentUserId.equals("anonimo")) return;
+        
+        db.collection("progreso_ejercicios")
+                .document(currentUserId + "_" + logicalId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    mapaProgreso.put(logicalId, 0);
+                    adapter.notifyDataSetChanged();
+                    abrirEjercicio(logicalId);
+                });
     }
 
     private void abrirEjercicio(String logicalId) {
@@ -186,14 +249,12 @@ public class PacienteEjerciciosFragment extends Fragment {
         }
     }
 
-    // Modelo de datos para las asignaciones
     public static class AsignacionPaciente {
         public String logicalId;
         public String nombreEjercicio;
         public String idPaciente;
         public String idTerapeuta;
         public long fechaAsignacion;
-
-        public AsignacionPaciente() {} // Requerido por Firestore
+        public AsignacionPaciente() {}
     }
 }

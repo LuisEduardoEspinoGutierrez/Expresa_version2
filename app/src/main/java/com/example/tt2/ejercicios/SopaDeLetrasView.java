@@ -80,7 +80,20 @@ public class SopaDeLetrasView extends View {
             }
         }
         this.words = wordsList;
-        this.found.clear();
+        // Se preserva el estado de 'found' si ya se cargó externamente
+        invalidate();
+    }
+
+    /**
+     * Marca una palabra como encontrada por su texto.
+     */
+    public void marcarPalabraComoEncontrada(String wordText) {
+        for (int i = 0; i < words.size(); i++) {
+            if (words.get(i).word.equalsIgnoreCase(wordText)) {
+                found.add(i);
+                break;
+            }
+        }
         invalidate();
     }
 

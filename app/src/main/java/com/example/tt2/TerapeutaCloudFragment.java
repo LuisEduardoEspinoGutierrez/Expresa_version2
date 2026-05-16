@@ -154,6 +154,7 @@ public class TerapeutaCloudFragment extends Fragment {
                 
                 AudioItem audio = new AudioItem();
                 audio.nombreEjercicio = "Ejercicio " + numEje.replace("_", ".");
+                audio.rawNumEje = numEje;
                 audio.fecha = timestamp;
                 audio.ref = item;
 
@@ -186,7 +187,14 @@ public class TerapeutaCloudFragment extends Fragment {
             Collections.sort(listPacientesNombres);
             
             for (List<AudioItem> audios : mapAudiosPorPaciente.values()) {
-                Collections.sort(audios, (a, b) -> Long.compare(b.fecha, a.fecha));
+                Collections.sort(audios, (a, b) -> {
+                    int comp = compareEjercicios(a.rawNumEje, b.rawNumEje);
+                    if (comp == 0) {
+                        // Si es el mismo ejercicio, ordenar por fecha (más reciente primero)
+                        return Long.compare(b.fecha, a.fecha);
+                    }
+                    return comp;
+                });
             }
 
             if (progressBar != null) progressBar.setVisibility(View.GONE);
@@ -200,6 +208,30 @@ public class TerapeutaCloudFragment extends Fragment {
                 elvAudios.expandGroup(0); // Expandir el primero automáticamente
             }
         });
+    }
+
+    private int compareEjercicios(String e1, String e2) {
+        try {
+            if (e1 == null || e2 == null) return 0;
+            
+            String[] p1 = e1.split("_");
+            String[] p2 = e2.split("_");
+            
+            int n1 = Integer.parseInt(p1[0]);
+            int n2 = Integer.parseInt(p2[0]);
+            
+            if (n1 != n2) {
+                return Integer.compare(n1, n2);
+            }
+            
+            // Si tienen sub-ejercicio (e.g. 6_1 vs 6_2)
+            int sub1 = (p1.length > 1) ? Integer.parseInt(p1[1]) : 0;
+            int sub2 = (p2.length > 1) ? Integer.parseInt(p2[1]) : 0;
+            
+            return Integer.compare(sub1, sub2);
+        } catch (Exception e) {
+            return e1.compareTo(e2);
+        }
     }
 
     private void reproducirAudio(StorageReference ref) {
@@ -292,6 +324,7 @@ public class TerapeutaCloudFragment extends Fragment {
 
     private static class AudioItem {
         String nombreEjercicio;
+        String rawNumEje;
         long fecha;
         StorageReference ref;
     }

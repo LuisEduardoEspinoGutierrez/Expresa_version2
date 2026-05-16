@@ -1,7 +1,9 @@
 package com.example.tt2.ejercicios;
 
+import android.app.AlertDialog;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.DragEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -9,38 +11,54 @@ import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.tt2.R;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 
 public class Ejercicio2Activity extends AppCompatActivity {
 
+    private static final String TAG = "Ejercicio2Activity";
     private MediaPlayer mediaPlayer;
     private MediaPlayer mediaPlayerInstrucciones;
     private int aciertos = 0;
-    // Eliminamos flores, quedan 16 correctas + 4 incorrectas = 20 imágenes (4x5)
     private final int TOTAL_CORRECTAS = 16;
+    private String usuarioID;
+    private final String numeroEjercicio = "2";
+    private FirebaseFirestore db;
+    private Map<String, Boolean> estadosCompletados = new HashMap<>();
 
-    // Cola para manejar los audios uno tras otro
     private final Queue<Integer> audioQueue = new LinkedList<>();
     private boolean isPlaying = false;
+    private GridLayout grid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ejercicio2);
 
-        // Flecha regresar
-        ImageView ivRegresar = findViewById(R.id.ivRegresar);
-        ivRegresar.setOnClickListener(v -> finish());
+        db = FirebaseFirestore.getInstance();
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+            usuarioID = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        } else {
+            usuarioID = "anonimo";
+        }
 
-        // Botón Audio Instrucciones
+        grid = findViewById(R.id.gridImagenes);
+        ImageView ivRegresar = findViewById(R.id.ivRegresar);
+        ivRegresar.setOnClickListener(v -> mostrarConfirmacionSalida());
+
         Button btnAudioInstrucciones = findViewById(R.id.btnAudioInstrucciones);
         mediaPlayerInstrucciones = MediaPlayer.create(this, R.raw.r_instrucciones_ejercicio2);
         btnAudioInstrucciones.setOnClickListener(v -> {
@@ -53,10 +71,10 @@ public class Ejercicio2Activity extends AppCompatActivity {
             }
         });
 
-        // Botón Finalizar
         Button btnFinalizar = findViewById(R.id.btnFinalizarEje02);
         btnFinalizar.setOnClickListener(v -> {
             if (aciertos == TOTAL_CORRECTAS) {
+                guardarProgreso();
                 Toast.makeText(this, "Ejercicio guardado correctamente", Toast.LENGTH_LONG).show();
                 finish();
             } else {
@@ -65,11 +83,71 @@ public class Ejercicio2Activity extends AppCompatActivity {
             }
         });
 
-        GridLayout grid = findViewById(R.id.gridImagenes);
         ImageView zonaR = findViewById(R.id.zonaR);
+        zonaR.setOnDragListener((v, event) -> {
+            if (event.getAction() == DragEvent.ACTION_DROP) {
+                View view = (View) event.getLocalState();
+                ItemImagen item = (ItemImagen) view.getTag();
+                if (item.esCorrecta) {
+                    grid.removeView(view);
+                    aciertos++;
+                    estadosCompletados.put(String.valueOf(item.imgRes), true);
+                    reproducirAudio(R.raw.muy_bien);
+                    guardarProgreso();
+                    if (aciertos == TOTAL_CORRECTAS) {
+                        Toast.makeText(this, "¡Felicidades! Has terminado el ejercicio", Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    reproducirAudio(R.raw.intentalo_otra_vez);
+                }
+            }
+            return true;
+        });
 
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                mostrarConfirmacionSalida();
+            }
+        });
+
+        cargarProgreso();
+    }
+
+    private void cargarProgreso() {
+        if (usuarioID.equals("anonimo")) {
+            inicializarImagenes();
+            return;
+        }
+
+        db.collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Map<String, Object> data = documentSnapshot.getData();
+                        if (data != null && data.containsKey("estados")) {
+                            Map<String, Boolean> estados = (Map<String, Boolean>) data.get("estados");
+                            if (estados != null) {
+                                estadosCompletados = estados;
+                                // Contar cuántos están ya completados
+                                for (Boolean completado : estadosCompletados.values()) {
+                                    if (completado) aciertos++;
+                                }
+                            }
+                        }
+                    }
+                    inicializarImagenes();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error cargando progreso", e);
+                    inicializarImagenes();
+                });
+    }
+
+    private void inicializarImagenes() {
         List<ItemImagen> listaImagenes = new ArrayList<>();
-        // CORRECTAS (16 imágenes)
+        // CORRECTAS
         listaImagenes.add(new ItemImagen(R.drawable.r_carrito, R.raw.r_carrito, true));
         listaImagenes.add(new ItemImagen(R.drawable.r_frasco, R.raw.r_frasco, true));
         listaImagenes.add(new ItemImagen(R.drawable.r_gorra, R.raw.r_gorra, true));
@@ -87,7 +165,7 @@ public class Ejercicio2Activity extends AppCompatActivity {
         listaImagenes.add(new ItemImagen(R.drawable.r_rosa, R.raw.r_rosa, true));
         listaImagenes.add(new ItemImagen(R.drawable.r_tornado, R.raw.r_tornado, true));
 
-        // INCORRECTAS (4 imágenes)
+        // INCORRECTAS
         listaImagenes.add(new ItemImagen(R.drawable.n_casa, R.raw.n_casa, false));
         listaImagenes.add(new ItemImagen(R.drawable.n_gato, R.raw.n_gato, false));
         listaImagenes.add(new ItemImagen(R.drawable.n_luna, R.raw.n_luna, false));
@@ -95,27 +173,44 @@ public class Ejercicio2Activity extends AppCompatActivity {
 
         Collections.shuffle(listaImagenes);
 
+        grid.removeAllViews();
         for (ItemImagen item : listaImagenes) {
-            agregarImagenAlGrid(grid, item);
-        }
-
-        zonaR.setOnDragListener((v, event) -> {
-            if (event.getAction() == DragEvent.ACTION_DROP) {
-                View view = (View) event.getLocalState();
-                boolean esCorrecta = (boolean) view.getTag();
-                if (esCorrecta) {
-                    grid.removeView(view); // Usamos removeView para que se active animateLayoutChanges
-                    aciertos++;
-                    reproducirAudio(R.raw.muy_bien);
-                    if (aciertos == TOTAL_CORRECTAS) {
-                        Toast.makeText(this, "¡Felicidades! Has terminado el ejercicio", Toast.LENGTH_LONG).show();
-                    }
-                } else {
-                    reproducirAudio(R.raw.intentalo_otra_vez);
-                }
+            // Solo agregar si no ha sido completada
+            if (!estadosCompletados.getOrDefault(String.valueOf(item.imgRes), false)) {
+                agregarImagenAlGrid(grid, item);
             }
-            return true;
-        });
+        }
+    }
+
+    private void guardarProgreso() {
+        if (usuarioID.equals("anonimo")) return;
+
+        int porcentaje = (aciertos * 100) / TOTAL_CORRECTAS;
+
+        Map<String, Object> progreso = new HashMap<>();
+        progreso.put("idPaciente", usuarioID);
+        progreso.put("logicalId", numeroEjercicio);
+        progreso.put("porcentaje", porcentaje);
+        progreso.put("estados", estadosCompletados);
+        progreso.put("completado", aciertos == TOTAL_CORRECTAS);
+
+        db.collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .set(progreso, SetOptions.merge())
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Progreso guardado"))
+                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar progreso", e));
+    }
+
+    private void mostrarConfirmacionSalida() {
+        new AlertDialog.Builder(this)
+                .setTitle("¿Quieres salir?")
+                .setMessage("Tu progreso se guardará automáticamente.")
+                .setPositiveButton("Sí", (dialog, which) -> {
+                    guardarProgreso();
+                    finish();
+                })
+                .setNegativeButton("No", null)
+                .show();
     }
 
     private void agregarImagenAlGrid(GridLayout grid, ItemImagen item) {
@@ -123,7 +218,7 @@ public class Ejercicio2Activity extends AppCompatActivity {
         img.setImageResource(item.imgRes);
         
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int size = (screenWidth / 4) - 40; // 4 columnas
+        int size = (screenWidth / 4) - 40; 
         
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = size;
@@ -131,7 +226,7 @@ public class Ejercicio2Activity extends AppCompatActivity {
         params.setMargins(10, 10, 10, 10);
         img.setLayoutParams(params);
         img.setPadding(10, 10, 10, 10);
-        img.setTag(item.esCorrecta);
+        img.setTag(item); // Guardamos el objeto completo
 
         img.setOnClickListener(v -> reproducirAudio(item.audioRes));
         img.setOnTouchListener((v, event) -> {

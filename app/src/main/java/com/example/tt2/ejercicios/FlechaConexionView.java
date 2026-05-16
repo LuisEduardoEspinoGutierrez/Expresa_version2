@@ -54,7 +54,6 @@ public class FlechaConexionView extends View {
         this.listener = l;
     }
 
-    // En iniciarArrastre, pídele al padre que no intercepte
     public void iniciarArrastre(String id, float x1, float y1) {
         if (yaConectados.contains(id)) return;
         idActual = id;
@@ -64,7 +63,6 @@ public class FlechaConexionView extends View {
         lineaY2 = y1;
         dibujando = true;
 
-        // ← AGREGA ESTO
         if (getParent() != null) {
             getParent().requestDisallowInterceptTouchEvent(true);
         }
@@ -72,12 +70,10 @@ public class FlechaConexionView extends View {
         invalidate();
     }
 
-    // En terminarArrastre, devuelve el control
     public void terminarArrastre(float x, float y) {
         if (!dibujando) return;
         dibujando = false;
 
-        // ← AGREGA ESTO
         if (getParent() != null) {
             getParent().requestDisallowInterceptTouchEvent(false);
         }
@@ -141,5 +137,18 @@ public class FlechaConexionView extends View {
 
     public Set<String> getYaConectados() {
         return yaConectados;
+    }
+
+    /**
+     * Restaura el estado de la vista desde una lista de líneas guardadas.
+     */
+    public void restaurarEstado(Set<String> conectados, List<float[]> lineas) {
+        this.yaConectados = new HashSet<>(conectados);
+        this.lineasConfirmadas = new ArrayList<>(lineas);
+        invalidate();
+    }
+
+    public List<float[]> getLineasConfirmadas() {
+        return lineasConfirmadas;
     }
 }

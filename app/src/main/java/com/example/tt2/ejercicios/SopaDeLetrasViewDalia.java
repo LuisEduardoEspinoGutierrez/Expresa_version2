@@ -15,7 +15,7 @@ import java.util.Random;
 import java.util.Set;
 
 /**
- * Vista genérica para una Sopa de Letras de 12x12.
+ * Vista genérica para una Sopa de Letras configurable.
  */
 public class SopaDeLetrasViewDalia extends View {
 
@@ -71,7 +71,7 @@ public class SopaDeLetrasViewDalia extends View {
 
     /**
      * Configura el tablero con una plantilla y la lista de palabras.
-     * @param template Array de Strings de 12x12. 'X' se reemplaza por letras aleatorias.
+     * @param template Array de Strings. 'X' se reemplaza por letras aleatorias.
      * @param wordsList Lista de objetos Word con las coordenadas de las palabras.
      */
     public void setBoard(String[] template, List<Word> wordsList) {
@@ -90,7 +90,20 @@ public class SopaDeLetrasViewDalia extends View {
             }
         }
         this.words = wordsList;
-        this.found.clear();
+        // Se preserva el estado de 'found' si ya se cargó externamente
+        invalidate();
+    }
+
+    /**
+     * Marca una palabra como encontrada por su texto.
+     */
+    public void marcarPalabraComoEncontrada(String wordText) {
+        for (int i = 0; i < words.size(); i++) {
+            if (words.get(i).word.equalsIgnoreCase(wordText)) {
+                found.add(i);
+                break;
+            }
+        }
         invalidate();
     }
 
@@ -148,7 +161,7 @@ public class SopaDeLetrasViewDalia extends View {
         if (c2 != c1) dc = (c2 > c1) ? 1 : -1;
 
         int r = r1, col = c1;
-        int maxSteps = rows + cols; // ← límite de seguridad
+        int maxSteps = rows + cols; 
         int steps = 0;
 
         while (steps < maxSteps) {
@@ -206,9 +219,7 @@ public class SopaDeLetrasViewDalia extends View {
         for (int i = 0; i < words.size(); i++) {
             Word w = words.get(i);
             if (!found.contains(i)) {
-                // Dirección normal
                 if ((sr == w.sr && sc == w.sc && er == w.er && ec == w.ec) ||
-                        // Dirección inversa
                         (sr == w.er && sc == w.ec && er == w.sr && ec == w.sc)) {
                     found.add(i);
                     if (listener != null) listener.onWordFound(w.word);

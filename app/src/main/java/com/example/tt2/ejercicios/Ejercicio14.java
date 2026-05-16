@@ -1,7 +1,9 @@
 package com.example.tt2.ejercicios;
 
+import android.app.AlertDialog;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.DragEvent;
 import android.view.View;
 import android.widget.Button;
@@ -9,15 +11,25 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.tt2.R;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Ejercicio14 extends AppCompatActivity implements View.OnClickListener {
 
+    private static final String TAG = "Ejercicio14";
     ImageView ivRegresarEje14;
     ImageView eje14_ra, eje14_esfera, eje14_raton, eje14_pez,
             eje14_re, eje14_reloj, eje14_telefono, eje14_taza,
@@ -29,6 +41,11 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
     private final int TOTAL_ACIERTOS = 6;
     MediaPlayer mp;
     private MediaPlayer mediaPlayerInstrucciones;
+
+    private String usuarioID;
+    private final String numeroEjercicio = "14";
+    private FirebaseFirestore db;
+    private List<Integer> idsEncontrados = new ArrayList<>();
 
     @Override
     protected void onDestroy() {
@@ -48,6 +65,14 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_ejercicio14);
+
+        db = FirebaseFirestore.getInstance();
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+            usuarioID = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        } else {
+            usuarioID = "anonimo";
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -118,6 +143,66 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
         eje14_ri.setOnDragListener(dragListener);
         eje14_ro.setOnDragListener(dragListener);
         eje14_ru.setOnDragListener(dragListener);
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                mostrarConfirmacionSalida();
+            }
+        });
+
+        cargarProgreso();
+    }
+
+    private void cargarProgreso() {
+        if (usuarioID.equals("anonimo")) return;
+        db.collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        List<Long> ids = (List<Long>) documentSnapshot.get("idsEncontrados");
+                        if (ids != null) {
+                            for (Long idLong : ids) {
+                                int id = idLong.intValue();
+                                idsEncontrados.add(id);
+                                View v = findViewById(id);
+                                if (v != null) v.setVisibility(View.INVISIBLE);
+                            }
+                            aciertos = idsEncontrados.size();
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error cargando progreso", e));
+    }
+
+    private void guardarProgreso() {
+        if (usuarioID.equals("anonimo")) return;
+        int porcentaje = (aciertos * 100) / TOTAL_ACIERTOS;
+        Map<String, Object> progreso = new HashMap<>();
+        progreso.put("idPaciente", usuarioID);
+        progreso.put("logicalId", numeroEjercicio);
+        progreso.put("porcentaje", porcentaje);
+        progreso.put("idsEncontrados", idsEncontrados);
+        progreso.put("completado", aciertos == TOTAL_ACIERTOS);
+
+        db.collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .set(progreso, SetOptions.merge())
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Progreso guardado"))
+                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar progreso", e));
+    }
+
+    private void mostrarConfirmacionSalida() {
+        new AlertDialog.Builder(this)
+                .setTitle("¿Quieres salir?")
+                .setMessage("Tu progreso se guardará automáticamente.")
+                .setPositiveButton("Sí", (dialog, which) -> {
+                    guardarProgreso();
+                    finish();
+                })
+                .setNegativeButton("No", null)
+                .show();
     }
 
     private final View.OnDragListener dragListener = (v, event) -> {
@@ -136,7 +221,9 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
 
             if (silabaImagen.equals(silabaZona)) {
                 imagenArrastrada.setVisibility(View.INVISIBLE);
-                aciertos++;
+                idsEncontrados.add(imagenArrastrada.getId());
+                aciertos = idsEncontrados.size();
+                guardarProgreso();
 
                 if (aciertos == TOTAL_ACIERTOS) {
                     reproducirAudios(R.raw.muy_bien, R.raw.felicidades);
@@ -189,9 +276,10 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
 
     @Override
     public void onClick(View v) {
-        if (v.getId() == R.id.ivRegresarEje14) {
-            finish();
-        } else if (v.getId() == R.id.btnAudioInstruccionesEje14) {
+        int id = v.getId();
+        if (id == R.id.ivRegresarEje14) {
+            mostrarConfirmacionSalida();
+        } else if (id == R.id.btnAudioInstruccionesEje14) {
             if (mediaPlayerInstrucciones != null) {
                 if (mediaPlayerInstrucciones.isPlaying()) {
                     mediaPlayerInstrucciones.seekTo(0);
@@ -199,18 +287,19 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
                     mediaPlayerInstrucciones.start();
                 }
             }
-        } else if (v.getId() == R.id.eje14_ra) {
+        } else if (id == R.id.eje14_ra) {
             reproducirAudios(R.raw.audio_ra_eje14);
-        } else if (v.getId() == R.id.eje14_re) {
+        } else if (id == R.id.eje14_re) {
             reproducirAudios(R.raw.audio_re_eje14);
-        } else if (v.getId() == R.id.eje14_ri) {
+        } else if (id == R.id.eje14_ri) {
             reproducirAudios(R.raw.audio_ri_eje14);
-        } else if (v.getId() == R.id.eje14_ro) {
+        } else if (id == R.id.eje14_ro) {
             reproducirAudios(R.raw.audio_ro_eje14);
-        } else if (v.getId() == R.id.eje14_ru) {
+        } else if (id == R.id.eje14_ru) {
             reproducirAudios(R.raw.audio_ru_eje14);
-        } else if (v.getId() == R.id.btnFinalizarEje14) {
+        } else if (id == R.id.btnFinalizarEje14) {
             if (aciertos == TOTAL_ACIERTOS) {
+                guardarProgreso();
                 Toast.makeText(this, "Ejercicio guardado correctamente", Toast.LENGTH_LONG).show();
                 finish();
             } else {
