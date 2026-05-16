@@ -2,6 +2,7 @@ package com.example.tt2;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,10 +20,10 @@ import android.widget.Toast;
 import com.example.tt2.ejercicios.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -38,7 +39,6 @@ public class PacienteEjerciciosFragment extends Fragment {
     private String currentUserId;
 
     public PacienteEjerciciosFragment() {
-        // Constructor público vacío requerido
     }
 
     public static PacienteEjerciciosFragment newInstance() {
@@ -59,7 +59,6 @@ public class PacienteEjerciciosFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflar el diseño para este fragmento
         return inflater.inflate(R.layout.fragment_ejercicios_paciente, container, false);
     }
 
@@ -80,14 +79,15 @@ public class PacienteEjerciciosFragment extends Fragment {
     private void cargarEjerciciosAsignados() {
         if (currentUserId.equals("anonimo")) return;
 
-        // Consultar la colección "pacientes_ejercicios" filtrando por el niño actual
+        // Quitamos el orderBy de la consulta de Firestore para evitar errores de índices.
+        // El ordenamiento lo hacemos localmente abajo.
         db.collection("pacientes_ejercicios")
                 .whereEqualTo("idPaciente", currentUserId)
-                .orderBy("fechaAsignacion", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
+                        Log.e("FIRESTORE_PACIENTE", "Error al cargar ejercicios: " + error.getMessage());
                         if (isAdded()) {
-                            Toast.makeText(getContext(), "Error al cargar ejercicios", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getContext(), "Error al conectar con la base de datos", Toast.LENGTH_SHORT).show();
                         }
                         return;
                     }
@@ -98,14 +98,18 @@ public class PacienteEjerciciosFragment extends Fragment {
                             AsignacionPaciente asig = doc.toObject(AsignacionPaciente.class);
                             listaEjercicios.add(asig);
                         }
+                        
+                        // Ordenar localmente por fechaAsignacion descendente (más recientes primero)
+                        Collections.sort(listaEjercicios, (o1, o2) -> Long.compare(o2.fechaAsignacion, o1.fechaAsignacion));
                     }
+                    
                     if (adapter != null) {
                         adapter.notifyDataSetChanged();
                     }
                 });
     }
 
-    // Adaptador para la lista de ejercicios del niño
+    // Adapter para la lista de ejercicios del niño
     private class EjerciciosPacienteAdapter extends RecyclerView.Adapter<EjerciciosPacienteAdapter.ViewHolder> {
         private List<AsignacionPaciente> mData;
 
@@ -182,7 +186,7 @@ public class PacienteEjerciciosFragment extends Fragment {
         }
     }
 
-    // Modelo de datos para las asignaciones (debe coincidir con el usado en TerapeutaEjerciciosFragment)
+    // Modelo de datos para las asignaciones
     public static class AsignacionPaciente {
         public String logicalId;
         public String nombreEjercicio;

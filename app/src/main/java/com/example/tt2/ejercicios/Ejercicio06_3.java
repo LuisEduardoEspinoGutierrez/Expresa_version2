@@ -167,15 +167,20 @@ public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickList
 
             File file = new File(
                     getExternalFilesDir(null),
-                    "audio_ejercicio6_3_trabalenguas.3gp"
+                    "audio_ejercicio6_3.mp4"
             );
 
             filePath = file.getAbsolutePath();
 
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+            
+            // CONFIGURACIÓN AAC / MPEG_4
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            recorder.setAudioSamplingRate(44100);
+            recorder.setAudioEncodingBitRate(96000);
+            
             recorder.setOutputFile(filePath);
 
             recorder.prepare();
@@ -186,7 +191,7 @@ public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickList
             btnSubirEje063.setEnabled(false);
 
             Toast.makeText(this,
-                    "Grabando...",
+                    "Grabando en alta calidad...",
                     Toast.LENGTH_SHORT).show();
 
         } catch (Exception e) {
@@ -231,7 +236,8 @@ public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickList
         Uri file = Uri.fromFile(new File(filePath));
 
         long timestamp = System.currentTimeMillis();
-        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + ".3gp";
+        String extension = "mp4";
+        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + "." + extension;
         String folderPath = "audios/ejercicio" + numeroEjercicio + "/";
 
         StorageReference ref = storageRef.child(folderPath + fileName);

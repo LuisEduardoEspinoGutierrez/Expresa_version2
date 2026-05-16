@@ -1,7 +1,9 @@
 package com.example.tt2;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,12 +19,13 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.tt2.ejercicios.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,12 +35,10 @@ public class TerapeutaEjerciciosFragment extends Fragment {
     private FirebaseFirestore db;
     private String currentUserId;
 
-    // Panel Superior: Ejercicios que el terapeuta ya asignó a niños (pacientes)
     private RecyclerView rvAsignacionesPacientes;
     private AsignacionesPacienteAdapter asignacionesAdapter;
     private List<AsignacionPaciente> listaAsignacionesPacientes;
 
-    // Panel Inferior: Catálogo de ejercicios que el admin le dio al terapeuta (cajitas)
     private RecyclerView rvEjerciciosDisponibles;
     private MisEjerciciosDisponiblesAdapter catalogAdapter;
     private List<AsignacionAdmin> listaDisponibles;
@@ -70,7 +71,6 @@ public class TerapeutaEjerciciosFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // 1. Configurar lista superior (Ejercicios asignados a niños)
         rvAsignacionesPacientes = view.findViewById(R.id.rvAsignacionesPacientes);
         if (rvAsignacionesPacientes != null) {
             rvAsignacionesPacientes.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -80,7 +80,6 @@ public class TerapeutaEjerciciosFragment extends Fragment {
             cargarEjerciciosAsignadosANinos();
         }
 
-        // 2. Configurar lista inferior (Catálogo de ejercicios que el terapeuta tiene para asignar)
         rvEjerciciosDisponibles = view.findViewById(R.id.rvEjerciciosParaAsignar);
         if (rvEjerciciosDisponibles != null) {
             rvEjerciciosDisponibles.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -92,11 +91,14 @@ public class TerapeutaEjerciciosFragment extends Fragment {
     }
 
     private void cargarEjerciciosAsignadosANinos() {
+        // Quitamos orderBy para evitar error de índices
         db.collection("pacientes_ejercicios")
                 .whereEqualTo("idTerapeuta", currentUserId)
-                .orderBy("fechaAsignacion", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
-                    if (error != null) return;
+                    if (error != null) {
+                        Log.e("FIRESTORE_ERROR", "Error en pacientes_ejercicios: " + error.getMessage());
+                        return;
+                    }
                     listaAsignacionesPacientes.clear();
                     if (value != null) {
                         for (QueryDocumentSnapshot doc : value) {
@@ -104,30 +106,32 @@ public class TerapeutaEjerciciosFragment extends Fragment {
                             asig.documentId = doc.getId();
                             listaAsignacionesPacientes.add(asig);
                         }
+                        // Ordenar localmente
+                        Collections.sort(listaAsignacionesPacientes, (a, b) -> Long.compare(b.fechaAsignacion, a.fechaAsignacion));
                     }
-                    if (asignacionesAdapter != null) {
-                        asignacionesAdapter.notifyDataSetChanged();
-                    }
+                    asignacionesAdapter.notifyDataSetChanged();
                 });
     }
 
     private void cargarMisEjerciciosDisponibles() {
-        // Carga los ejercicios que el administrador le asignó a este terapeuta
+        // Quitamos orderBy para evitar error de índices
         db.collection("ejercicios_asignados")
                 .whereEqualTo("idTerapeuta", currentUserId)
-                .orderBy("fechaAsignacion", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
-                    if (error != null) return;
+                    if (error != null) {
+                        Log.e("FIRESTORE_ERROR", "Error en ejercicios_asignados: " + error.getMessage());
+                        return;
+                    }
                     listaDisponibles.clear();
                     if (value != null) {
                         for (QueryDocumentSnapshot doc : value) {
                             AsignacionAdmin eje = doc.toObject(AsignacionAdmin.class);
                             listaDisponibles.add(eje);
                         }
+                        // Ordenar localmente
+                        Collections.sort(listaDisponibles, (a, b) -> Long.compare(b.fechaAsignacion, a.fechaAsignacion));
                     }
-                    if (catalogAdapter != null) {
-                        catalogAdapter.notifyDataSetChanged();
-                    }
+                    catalogAdapter.notifyDataSetChanged();
                 });
     }
 
@@ -145,30 +149,29 @@ public class TerapeutaEjerciciosFragment extends Fragment {
                     }
 
                     if (nombres.isEmpty()) {
-                        Toast.makeText(getContext(), "No hay pacientes registrados", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "No hay niños registrados", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
                     AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-                    builder.setTitle("Asignar a Paciente: " + nombreEje);
+                    builder.setTitle("Asignar a Niño: " + nombreEje);
                     builder.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, nombres),
                             (dialog, which) -> {
                                 verificarYAsignarAPaciente(ids.get(which), nombres.get(which), logicalId, nombreEje);
                             });
                     builder.show();
                 })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al cargar pacientes", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al cargar niños", Toast.LENGTH_SHORT).show());
     }
 
     private void verificarYAsignarAPaciente(String idPac, String nomPac, String logId, String nomEje) {
-        // VALIDACIÓN: Evitar duplicados
         db.collection("pacientes_ejercicios")
                 .whereEqualTo("idPaciente", idPac)
                 .whereEqualTo("logicalId", logId)
                 .get()
                 .addOnSuccessListener(snap -> {
                     if (!snap.isEmpty()) {
-                        Toast.makeText(getContext(), nomPac + " ya tiene este ejercicio asignado.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getContext(), "El niño " + nomPac + " ya tiene este ejercicio.", Toast.LENGTH_LONG).show();
                     } else {
                         realizarAsignacionAPaciente(idPac, nomPac, logId, nomEje);
                     }
@@ -186,15 +189,14 @@ public class TerapeutaEjerciciosFragment extends Fragment {
 
         db.collection("pacientes_ejercicios")
                 .add(map)
-                .addOnSuccessListener(unused -> Toast.makeText(getContext(), "Asignado a " + nomPac + " ✓", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al asignar", Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(unused -> Toast.makeText(getContext(), "Asignado correctamente ✓", Toast.LENGTH_SHORT).show());
     }
 
     private void desasignarEjercicioPaciente(String docId, String nomPac) {
         new AlertDialog.Builder(getContext())
                 .setTitle("Confirmar")
                 .setMessage("¿Quitar este ejercicio a " + nomPac + "?")
-                .setPositiveButton("Sí, quitar", (dialog, which) -> {
+                .setPositiveButton("Sí", (dialog, which) -> {
                     db.collection("pacientes_ejercicios").document(docId).delete()
                             .addOnSuccessListener(aVoid -> Toast.makeText(getContext(), "Asignación eliminada ✓", Toast.LENGTH_SHORT).show());
                 })
@@ -202,9 +204,6 @@ public class TerapeutaEjerciciosFragment extends Fragment {
                 .show();
     }
 
-    // --- ADAPTADORES ---
-
-    // Adaptador para el catálogo (Las "cajitas" de abajo)
     private class MisEjerciciosDisponiblesAdapter extends RecyclerView.Adapter<MisEjerciciosDisponiblesAdapter.ViewHolder> {
         private List<AsignacionAdmin> mData;
         public MisEjerciciosDisponiblesAdapter(List<AsignacionAdmin> data) { this.mData = data; }
@@ -219,7 +218,7 @@ public class TerapeutaEjerciciosFragment extends Fragment {
             AsignacionAdmin eje = mData.get(pos);
             h.tvNom.setText(eje.nombreEjercicio);
             h.tvNum.setText("Ejercicio " + eje.logicalId);
-            h.btnAsig.setText("Asignar a Paciente");
+            h.btnAsig.setText("Asignar a Niño");
             h.btnAsig.setOnClickListener(v -> mostrarDialogoPacientes(eje.logicalId, eje.nombreEjercicio));
         }
 
@@ -237,7 +236,6 @@ public class TerapeutaEjerciciosFragment extends Fragment {
         }
     }
 
-    // Adaptador para el Panel superior (Asignaciones ya hechas a pacientes)
     private class AsignacionesPacienteAdapter extends RecyclerView.Adapter<AsignacionesPacienteAdapter.ViewHolder> {
         private List<AsignacionPaciente> mData;
         public AsignacionesPacienteAdapter(List<AsignacionPaciente> data) { this.mData = data; }
@@ -251,7 +249,7 @@ public class TerapeutaEjerciciosFragment extends Fragment {
         public void onBindViewHolder(@NonNull ViewHolder h, int pos) {
             AsignacionPaciente asig = mData.get(pos);
             h.tvEje.setText(asig.nombreEjercicio);
-            h.tvPac.setText("Paciente: " + asig.nombrePaciente);
+            h.tvPac.setText("Niño: " + asig.nombrePaciente);
             h.btnQuit.setOnClickListener(v -> desasignarEjercicioPaciente(asig.documentId, asig.nombrePaciente));
         }
 
@@ -269,7 +267,6 @@ public class TerapeutaEjerciciosFragment extends Fragment {
         }
     }
 
-    // Modelos de datos
     public static class AsignacionPaciente {
         public String documentId, logicalId, nombreEjercicio, idPaciente, nombrePaciente, idTerapeuta;
         public long fechaAsignacion;

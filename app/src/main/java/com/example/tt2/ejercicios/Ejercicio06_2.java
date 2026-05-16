@@ -29,6 +29,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.tt2.R;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -47,7 +48,9 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
     MediaRecorder recorder;
 
     // VARIABLES
-    String filePath;
+    private String filePath;
+    private String usuarioID;
+    private final String numeroEjercicio = "6_2";
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
@@ -73,6 +76,12 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_ejercicio062);
+
+        // Usuario actual
+        usuarioID = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid()
+                : "anonimo";
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -106,6 +115,7 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
         // CONFIGURACIONES INICIALES
         // =========================
         btnDetenerEje062.setEnabled(false);
+        btnSubirEje062.setEnabled(false);
 
         configurarTexto();
 
@@ -157,15 +167,20 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
 
             File file = new File(
                     getExternalFilesDir(null),
-                    "audio_ejercicio6_2_trabalenguas.3gp"
+                    "audio_ejercicio6_2_trabalenguas.mp4"
             );
 
             filePath = file.getAbsolutePath();
 
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+            
+            // CONFIGURACIÓN AAC / MPEG_4
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            recorder.setAudioSamplingRate(44100);
+            recorder.setAudioEncodingBitRate(96000);
+            
             recorder.setOutputFile(filePath);
 
             recorder.prepare();
@@ -173,9 +188,10 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
 
             btnGrabarEje062.setEnabled(false);
             btnDetenerEje062.setEnabled(true);
+            btnSubirEje062.setEnabled(false);
 
             Toast.makeText(this,
-                    "Grabando...",
+                    "Grabando en alta calidad...",
                     Toast.LENGTH_SHORT).show();
 
         } catch (Exception e) {
@@ -197,6 +213,7 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
 
                 btnGrabarEje062.setEnabled(true);
                 btnDetenerEje062.setEnabled(false);
+                btnSubirEje062.setEnabled(true);
 
                 Toast.makeText(this, "Grabación detenida", Toast.LENGTH_SHORT).show();
             }
@@ -207,43 +224,36 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
     }
 
     private void uploadAudio() {
-        if (filePath == null) {
+        if (filePath == null || !new File(filePath).exists()) {
             Toast.makeText(this, "Primero graba un audio", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        File fileObj = new File(filePath);
-
-        if (!fileObj.exists()) {
-            Toast.makeText(this, "Archivo no encontrado", Toast.LENGTH_SHORT).show();
-
-            return;
-        }
+        btnSubirEje062.setEnabled(false);
 
         FirebaseStorage storage = FirebaseStorage.getInstance();
         StorageReference storageRef = storage.getReference();
+        Uri file = Uri.fromFile(new File(filePath));
 
-        Uri file = Uri.fromFile(fileObj);
+        long timestamp = System.currentTimeMillis();
+        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + ".mp4";
+        String folderPath = "audios/ejercicio" + numeroEjercicio + "/";
 
-        StorageReference ref = storageRef.child("ejercicios/ej6_2_trabalenguas_" + System.currentTimeMillis() + ".3gp");
+        StorageReference ref = storageRef.child(folderPath + fileName);
 
         Toast.makeText(this, "Subiendo audio...", Toast.LENGTH_SHORT).show();
 
         ref.putFile(file)
                 .addOnSuccessListener(taskSnapshot ->
                         ref.getDownloadUrl().addOnSuccessListener(uri -> {
-
-                            Toast.makeText(this, "Audio subido correctamente", Toast.LENGTH_LONG).show();
-
+                            Toast.makeText(this, "Audio subido correctamente ✓", Toast.LENGTH_LONG).show();
                             Log.d("EJERCICIO_6_2", "URL: " + uri.toString());
                         })
                 )
-
                 .addOnFailureListener(e -> {
-
                     Log.e("EJERCICIO_6_2", "Error al subir", e);
-
                     Toast.makeText(this, "Error al subir: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    btnSubirEje062.setEnabled(true);
                 });
     }
 

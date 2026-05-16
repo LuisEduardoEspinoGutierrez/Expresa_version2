@@ -124,13 +124,18 @@ public class Ejercicio3Activity extends AppCompatActivity {
 
     private void startRecording() {
         try {
-            File file = new File(getExternalFilesDir(null), "audio_ejercicio3.3gp");
+            File file = new File(getExternalFilesDir(null), "audio_ejercicio3.mp4");
             filePath = file.getAbsolutePath();
 
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+            
+            // CONFIGURACIÓN RECOMENDADA (AAC / MPEG_4)
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            recorder.setAudioSamplingRate(44100);
+            recorder.setAudioEncodingBitRate(96000);
+            
             recorder.setOutputFile(filePath);
 
             recorder.prepare();
@@ -138,7 +143,7 @@ public class Ejercicio3Activity extends AppCompatActivity {
 
             btnGrabar.setEnabled(false);
             btnDetener.setEnabled(true);
-            Toast.makeText(this, " Grabando...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, " Grabando en alta calidad...", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error al iniciar grabación", Toast.LENGTH_SHORT).show();
@@ -180,7 +185,7 @@ public class Ejercicio3Activity extends AppCompatActivity {
         // audios/ejercicio(numero tal)/[usuarioID]_[numeroEjercicico]_[tipoArchivo]_[timestamp].[extension]
         String tipoArchivo = "audio";
         long timestamp = System.currentTimeMillis();
-        String extension = "3gp";
+        String extension = "mp4";
         String fileName = usuarioID + "_eje" + numeroEjercicio + "_" + tipoArchivo + "_" + timestamp + "." + extension;
         String folderPath = "audios/ejercicio" + numeroEjercicio + "/";
         
@@ -191,7 +196,7 @@ public class Ejercicio3Activity extends AppCompatActivity {
         ref.putFile(file)
                 .addOnSuccessListener(taskSnapshot -> {
                     ref.getDownloadUrl().addOnSuccessListener(uri -> {
-                        Toast.makeText(this, " Audio subido correctamente", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, " Audio subido correctamente ✓", Toast.LENGTH_LONG).show();
                         Log.d("EJERCICIO_3", "URL: " + uri.toString());
                     });
                 })

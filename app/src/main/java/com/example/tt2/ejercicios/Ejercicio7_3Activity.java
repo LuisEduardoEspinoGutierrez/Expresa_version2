@@ -13,6 +13,7 @@ import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -125,13 +126,18 @@ public class Ejercicio7_3Activity extends AppCompatActivity {
 
     private void startRecording() {
         try {
-            File file = new File(getExternalFilesDir(null), "audio_ejercicio7_3_trabalenguas.3gp");
+            File file = new File(getExternalFilesDir(null), "audio_ejercicio7_3_trabalenguas.mp4");
             filePath = file.getAbsolutePath();
 
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+            
+            // CONFIGURACIÓN AAC / MPEG_4
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            recorder.setAudioSamplingRate(44100);
+            recorder.setAudioEncodingBitRate(96000);
+            
             recorder.setOutputFile(filePath);
 
             recorder.prepare();
@@ -140,7 +146,7 @@ public class Ejercicio7_3Activity extends AppCompatActivity {
             btnGrabar.setEnabled(false);
             btnDetener.setEnabled(true);
             btnSubir.setEnabled(false);
-            Toast.makeText(this, " Grabando...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, " Grabando en alta calidad...", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error al iniciar grabación", Toast.LENGTH_SHORT).show();
@@ -175,7 +181,7 @@ public class Ejercicio7_3Activity extends AppCompatActivity {
         Uri file = Uri.fromFile(new File(filePath));
 
         long timestamp = System.currentTimeMillis();
-        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + ".3gp";
+        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + ".mp4";
         String folderPath = "audios/ejercicio" + numeroEjercicio + "/";
 
         StorageReference ref = storageRef.child(folderPath + fileName);

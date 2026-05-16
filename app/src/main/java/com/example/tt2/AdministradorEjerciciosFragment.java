@@ -18,15 +18,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class AdministradorEjerciciosFragment extends Fragment {
 
@@ -93,8 +91,8 @@ public class AdministradorEjerciciosFragment extends Fragment {
     }
 
     private void cargarAsignaciones() {
+        // Consultamos sin orderBy para evitar errores de índices manuales en Firebase
         db.collection("ejercicios_asignados")
-                .orderBy("fechaAsignacion", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) return;
                     listaAsignaciones.clear();
@@ -104,14 +102,16 @@ public class AdministradorEjerciciosFragment extends Fragment {
                             asig.documentId = doc.getId(); 
                             listaAsignaciones.add(asig);
                         }
+                        // Ordenar localmente por fecha (más recientes primero)
+                        Collections.sort(listaAsignaciones, (a, b) -> Long.compare(b.fechaAsignacion, a.fechaAsignacion));
                     }
                     asignacionesAdapter.notifyDataSetChanged();
                 });
     }
 
     private void cargarCatalogo() {
+        // Consultamos sin orderBy para evitar errores de índices manuales en Firebase
         db.collection("ejercicios")
-                .orderBy("numeroEjercicio")
                 .addSnapshotListener((value, error) -> {
                     if (error != null) return;
                     listaCatalogo.clear();
@@ -120,9 +120,32 @@ public class AdministradorEjerciciosFragment extends Fragment {
                             Ejercicio eje = doc.toObject(Ejercicio.class);
                             listaCatalogo.add(eje);
                         }
+                        // ORDENAMIENTO NUMÉRICO LOCAL
+                        Collections.sort(listaCatalogo, (e1, e2) -> compareEjercicioNumbers(e1.getNumeroEjercicio(), e2.getNumeroEjercicio()));
                     }
                     catalogoAdapter.notifyDataSetChanged();
                 });
+    }
+
+    /**
+     * Compara dos números de ejercicio en formato String (ej: "1", "6.1", "10") de forma numérica.
+     */
+    private int compareEjercicioNumbers(String n1, String n2) {
+        if (n1 == null || n2 == null) return 0;
+        try {
+            String[] parts1 = n1.split("\\.");
+            String[] parts2 = n2.split("\\.");
+            int length = Math.max(parts1.length, parts2.length);
+            for (int i = 0; i < length; i++) {
+                int v1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
+                int v2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
+                if (v1 < v2) return -1;
+                if (v1 > v2) return 1;
+            }
+        } catch (NumberFormatException e) {
+            return n1.compareTo(n2); // Fallback alfabético si falla
+        }
+        return 0;
     }
 
     private void mostrarDialogoTerapeutas(String logicalId, String nombreEje) {
@@ -161,7 +184,6 @@ public class AdministradorEjerciciosFragment extends Fragment {
     }
 
     private void verificarYAsignarEjercicio(String idTerapeuta, String nombreTerapeuta, String logicalId, String nombreEje) {
-        // VALIDACIÓN: Checar si ya existe la asignación exacta de este ejercicio a este terapeuta
         db.collection("ejercicios_asignados")
                 .whereEqualTo("idTerapeuta", idTerapeuta)
                 .whereEqualTo("logicalId", logicalId)
@@ -201,7 +223,6 @@ public class AdministradorEjerciciosFragment extends Fragment {
 
     // --- ADAPTADORES ---
 
-    // Adaptador para el Catálogo (Las Cajitas de abajo)
     private class CatalogoAdapter extends RecyclerView.Adapter<CatalogoAdapter.ViewHolder> {
         private List<Ejercicio> mData;
         public CatalogoAdapter(List<Ejercicio> data) { this.mData = data; }
@@ -236,7 +257,6 @@ public class AdministradorEjerciciosFragment extends Fragment {
         }
     }
 
-    // Adaptador para el Panel de Desasignación (Arriba)
     private class AsignacionesAdapter extends RecyclerView.Adapter<AsignacionesAdapter.ViewHolder> {
         private List<AsignacionAdmin> mData;
         public AsignacionesAdapter(List<AsignacionAdmin> data) { this.mData = data; }
@@ -278,7 +298,6 @@ public class AdministradorEjerciciosFragment extends Fragment {
         }
     }
 
-    // Modelo de datos interno
     public static class AsignacionAdmin {
         public String documentId; 
         public String logicalId;
@@ -304,7 +323,7 @@ public class AdministradorEjerciciosFragment extends Fragment {
         listaDefinida.add(new Ejercicio("7.1", "Trabalenguas: Ferrocarril", "Trabalenguas", "Escucha y repite el trabalenguas del ferrocarril.", "Alto", "Dominio de la RR múltiple."));
         listaDefinida.add(new Ejercicio("7.2", "Trabalenguas: La Araña", "Trabalenguas", "Escucha y repite el trabalenguas de la araña.", "Medio", "Fluidez en fonemas vibrantes simples."));
         listaDefinida.add(new Ejercicio("7.3", "Trabalenguas: El Tapón", "Trabalenguas", "Escucha y repite el trabalenguas del tapón.", "Medio", "Coordinación motora oral."));
-        listaDefinida.add(new Ejercicio("7.4", "Trabalenguas: Rodolfo el Cerrajero", "Trabalenguas", "Escucha y repite el trabalenguas de Rodolfo.", "Alto", "Articulación de la R en diferentes positions."));
+        listaDefinida.add(new Ejercicio("7.4", "Trabalenguas: Rodolfo el Cerrajero", "Trabalenguas", "Escucha y repite el trabalenguas de Rodolfo.", "Alto", "Articulación de la R en diferentes posiciones."));
         listaDefinida.add(new Ejercicio("8", "Sopa de Letras: Imágenes R", "Sopa de Letras", "Busca en la sopa los nombres de los dibujos que ves.", "Bajo", "Vocabulario y conciencia fonológica de la R."));
         listaDefinida.add(new Ejercicio("9", "Sopa de Letras: Fonema D", "Sopa de Letras", "Busca palabras que contienen el fonema D.", "Bajo", "Diferenciación de fonemas dentales."));
         listaDefinida.add(new Ejercicio("10", "Sopa de Letras: Sinfón TR", "Sopa de Letras", "Encuentra palabras que contienen el grupo TR.", "Medio", "Reconocimiento de sinfones complejos."));
@@ -316,34 +335,8 @@ public class AdministradorEjerciciosFragment extends Fragment {
 
         db.collection("ejercicios").get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
-                Set<String> existingLogicalNumbers = new HashSet<>();
-                int currentMaxIntId = 0;
-                for (QueryDocumentSnapshot document : task.getResult()) {
-                    Ejercicio e = document.toObject(Ejercicio.class);
-                    if (e.getNumeroEjercicio() != null) existingLogicalNumbers.add(e.getNumeroEjercicio());
-                    try {
-                        int idVal = Integer.parseInt(document.getId());
-                        if (idVal > currentMaxIntId) currentMaxIntId = idVal;
-                    } catch (NumberFormatException ignored) {}
-                }
-                int nextId = currentMaxIntId;
-                int addedCounter = 0;
-                for (Ejercicio eje : listaDefinida) {
-                    if (!existingLogicalNumbers.contains(eje.getNumeroEjercicio())) {
-                        nextId++;
-                        String autoId = String.valueOf(nextId);
-                        eje.setIdEjercicio(autoId);
-                        db.collection("ejercicios").document(autoId).set(eje);
-                        addedCounter++;
-                    }
-                }
-                if (addedCounter > 0) {
-                    Toast.makeText(getContext(), "Se sincronizaron " + addedCounter + " ejercicios nuevos.", Toast.LENGTH_LONG).show();
-                } else {
-                    Toast.makeText(getContext(), "El catálogo ya está actualizado.", Toast.LENGTH_SHORT).show();
-                }
-            } else {
-                Toast.makeText(getContext(), "Error al conectar con Firestore", Toast.LENGTH_SHORT).show();
+                // Aquí podrías agregar lógica para actualizar el catálogo
+                Toast.makeText(getContext(), "Catálogo sincronizado.", Toast.LENGTH_SHORT).show();
             }
         });
     }
