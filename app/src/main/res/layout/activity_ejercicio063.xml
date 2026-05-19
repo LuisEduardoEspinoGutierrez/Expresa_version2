@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:background="#F5F7FA"
     tools:context=".ejercicios.Ejercicio06_3">
 
     <LinearLayout
@@ -69,7 +70,6 @@
                     android:orientation="vertical"
                     android:padding="15dp">
 
-                    <!-- Encabezado -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -95,19 +95,15 @@
                             android:textStyle="bold"
                             android:textColor="#FFFFFF"
                             app:icon="@android:drawable/ic_media_play"
-                            app:iconSize="20dp"
                             app:iconTint="#FFFFFF"
-                            app:iconPadding="10dp"
-                            app:iconGravity="textStart"
                             android:backgroundTint="#FFA726"
                             app:cornerRadius="20dp"/>
                     </LinearLayout>
 
-                    <!-- TEXTO INSTRUCCIONES -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="1. Escucha con atención el trabalenguas. \n2. Léelo en voz alta.\n2. Presiona grabar y repite.\n3. Presiona terminar.\n4. Presiona subir audio."
+                        android:text="1. Escucha con atención el trabalenguas. \n2. Léelo en voz alta.\n2. Presiona grabar y repite.\n3. Presiona terminar.\n4. Escucha tu audio y si te gusta, presiona subir."
                         android:textSize="18sp"
                         android:lineSpacingExtra="4dp"
                         android:layout_marginTop="6dp"/>
@@ -125,8 +121,9 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical">
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingBottom="18dp">
 
                     <TextView
                         android:id="@+id/tvLecturaEje063"
@@ -143,9 +140,7 @@
                     <Button
                         android:id="@+id/btnAudioTrabalenguasEje063"
                         android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_weight="0.4"
-                        android:layout_marginBottom="18dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginHorizontal="18dp"
                         android:text="Escuchar"
                         android:textAllCaps="false"
@@ -153,13 +148,53 @@
                         android:textStyle="bold"
                         android:textColor="#FFFFFF"
                         app:icon="@android:drawable/ic_media_play"
-                        app:iconSize="20dp"
                         app:iconTint="#FFFFFF"
-                        app:iconPadding="10dp"
-                        app:iconGravity="textStart"
                         android:backgroundTint="#FFA726"/>
                 </LinearLayout>
                 </androidx.cardview.widget.CardView>
+
+            <!-- CAJA DE ESCUCHA (NUEVA) -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cvPlaybackEje063"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                android:layout_margin="8dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="12dp"
+                    android:gravity="center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/btnPlayRecordedEje063"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@android:drawable/ic_media_play"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Escuchar grabación" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Escuchar grabación"
+                        android:textSize="16sp"
+                        android:layout_marginStart="8dp"/>
+
+                    <ProgressBar
+                        android:id="@+id/pbUploadEje063"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="80dp"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone"
+                        android:max="100"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
         </LinearLayout>
 
@@ -193,7 +228,8 @@
             android:textAllCaps="false"
             android:layout_margin="4dp"
             android:backgroundTint="#757575"
-            android:textColor="#FFFFFF"/>
+            android:textColor="#FFFFFF"
+            android:enabled="false"/>
 
         <Button
             android:id="@+id/btnSubirEje063"
@@ -204,7 +240,8 @@
             android:textAllCaps="false"
             android:layout_margin="4dp"
             android:backgroundTint="#4CAF50"
-            android:textColor="#FFFFFF"/>
+            android:textColor="#FFFFFF"
+            android:enabled="false"/>
 
     </LinearLayout>
 

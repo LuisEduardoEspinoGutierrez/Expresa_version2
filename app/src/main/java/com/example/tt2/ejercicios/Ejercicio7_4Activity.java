@@ -15,7 +15,9 @@ import android.text.style.StyleSpan;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,6 +25,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -30,21 +33,30 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.tt2.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Ejercicio7_4Activity extends AppCompatActivity {
 
     private MediaPlayer mediaPlayerInstrucciones;
+    private MediaPlayer mediaPlayerRecorded;
     private MediaRecorder recorder;
     private String filePath;
     private String usuarioID;
-    private final String numeroEjercicio = "7_4";
+    private final String numeroEjercicio = "7.4";
+    private boolean isUploaded = false;
+
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
     private Button btnGrabar, btnDetener, btnSubir;
+    private ImageButton btnPlayRecorded;
+    private CardView cvPlayback;
+    private ProgressBar pbUpload;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,12 +64,10 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_ejercicio7_4);
 
-        // Usuario actual
         usuarioID = FirebaseAuth.getInstance().getCurrentUser() != null
                 ? FirebaseAuth.getInstance().getCurrentUser().getUid()
                 : "anonimo";
 
-        // 🔐 Configurar lanzador de permisos
         requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
             if (isGranted) {
                 startRecording();
@@ -66,18 +76,15 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
             }
         });
 
-        // Ajuste de márgenes
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
-        // BOTÓN REGRESAR
         ImageView btnBack = findViewById(R.id.ivRegresar);
         btnBack.setOnClickListener(v -> finish());
 
-        // TEXTO CON RESALTADO DE "r" (TRABALENGUAS)
         TextView tvLectura = findViewById(R.id.tvLectura);
         String texto = "Rodolfo el cerrajero vende herrajes y cerrojos en su cerrajería, coloca herrajes y abre cerrojos de rejas.";
         SpannableString spannable = new SpannableString(texto);
@@ -91,7 +98,6 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
         }
         tvLectura.setText(spannable);
 
-        // BOTÓN ESCUCHAR INSTRUCCIONES
         Button btnAudio = findViewById(R.id.btnAudioInstrucciones);
         mediaPlayerInstrucciones = MediaPlayer.create(this, R.raw.r_instrucciones_ejercicio7);
         btnAudio.setOnClickListener(v -> {
@@ -104,15 +110,21 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
             }
         });
 
-        // BOTONES DE GRABACIÓN
         btnGrabar = findViewById(R.id.btnGrabar);
         btnDetener = findViewById(R.id.btnDetener);
         btnSubir = findViewById(R.id.btnSubir);
+        btnPlayRecorded = findViewById(R.id.btnPlayRecorded);
+        cvPlayback = findViewById(R.id.cvPlayback);
+        pbUpload = findViewById(R.id.pbUpload);
 
         btnDetener.setEnabled(false);
         btnSubir.setEnabled(false);
 
         btnGrabar.setOnClickListener(v -> {
+            if (isUploaded) {
+                Toast.makeText(this, "Ya has subido un audio para este ejercicio", Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 startRecording();
             } else {
@@ -122,31 +134,47 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
 
         btnDetener.setOnClickListener(v -> stopRecording());
         btnSubir.setOnClickListener(v -> uploadAudio());
+        btnPlayRecorded.setOnClickListener(v -> playRecordedAudio());
+
+        checkExistingProgress();
+    }
+
+    private void checkExistingProgress() {
+        if (usuarioID.equals("anonimo")) return;
+        FirebaseFirestore.getInstance().collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Long porcentaje = documentSnapshot.getLong("porcentaje");
+                        if (porcentaje != null && porcentaje >= 100) {
+                            isUploaded = true;
+                            btnGrabar.setEnabled(false);
+                            btnGrabar.setText("Completado");
+                        }
+                    }
+                });
     }
 
     private void startRecording() {
         try {
-            File file = new File(getExternalFilesDir(null), "audio_ejercicio7_4_trabalenguas.mp4");
+            File file = new File(getExternalFilesDir(null), "audio_ejercicio7_4.mp4");
             filePath = file.getAbsolutePath();
-
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            
-            // CONFIGURACIÓN AAC / MPEG_4
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             recorder.setAudioSamplingRate(44100);
             recorder.setAudioEncodingBitRate(96000);
-            
             recorder.setOutputFile(filePath);
-
             recorder.prepare();
             recorder.start();
 
             btnGrabar.setEnabled(false);
             btnDetener.setEnabled(true);
             btnSubir.setEnabled(false);
-            Toast.makeText(this, " Grabando en alta calidad...", Toast.LENGTH_SHORT).show();
+            cvPlayback.setVisibility(View.GONE);
+            Toast.makeText(this, "Grabando...", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error al iniciar grabación", Toast.LENGTH_SHORT).show();
@@ -160,46 +188,80 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
                 recorder.release();
                 recorder = null;
                 btnGrabar.setEnabled(true);
+                btnGrabar.setText("Reintentar");
                 btnDetener.setEnabled(false);
                 btnSubir.setEnabled(true);
-                Toast.makeText(this, "Grabación detenida", Toast.LENGTH_SHORT).show();
+                cvPlayback.setVisibility(View.VISIBLE);
+                Toast.makeText(this, "Grabación guardada", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void uploadAudio() {
-        if (filePath == null || !new File(filePath).exists()) {
-            Toast.makeText(this, "Primero graba un audio", Toast.LENGTH_SHORT).show();
-            return;
+    private void playRecordedAudio() {
+        if (filePath == null) return;
+        try {
+            if (mediaPlayerRecorded != null) {
+                mediaPlayerRecorded.release();
+            }
+            mediaPlayerRecorded = new MediaPlayer();
+            mediaPlayerRecorded.setDataSource(filePath);
+            mediaPlayerRecorded.prepare();
+            mediaPlayerRecorded.start();
+            btnPlayRecorded.setImageResource(android.R.drawable.ic_media_pause);
+            mediaPlayerRecorded.setOnCompletionListener(mp -> btnPlayRecorded.setImageResource(android.R.drawable.ic_media_play));
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
 
-        btnSubir.setEnabled(false);
+    private void uploadAudio() {
+        if (filePath == null || isUploaded) return;
+        File fileObj = new File(filePath);
+        if (!fileObj.exists()) return;
         FirebaseStorage storage = FirebaseStorage.getInstance();
         StorageReference storageRef = storage.getReference();
-        Uri file = Uri.fromFile(new File(filePath));
-
+        Uri file = Uri.fromFile(fileObj);
         long timestamp = System.currentTimeMillis();
-        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + ".mp4";
-        String folderPath = "audios/ejercicio" + numeroEjercicio + "/";
+        String fileName = usuarioID + "_eje7_4_audio_" + timestamp + ".mp4";
+        StorageReference ref = storageRef.child("audios/ejercicio7_4/" + fileName);
 
-        StorageReference ref = storageRef.child(folderPath + fileName);
-
-        Toast.makeText(this, "Subiendo audio...", Toast.LENGTH_SHORT).show();
+        pbUpload.setVisibility(View.VISIBLE);
+        pbUpload.setProgress(0);
+        btnSubir.setEnabled(false);
+        btnGrabar.setEnabled(false);
 
         ref.putFile(file)
+                .addOnProgressListener(snapshot -> {
+                    double progress = (100.0 * snapshot.getBytesTransferred()) / snapshot.getTotalByteCount();
+                    pbUpload.setProgress((int) progress);
+                })
                 .addOnSuccessListener(taskSnapshot -> {
-                    ref.getDownloadUrl().addOnSuccessListener(uri -> {
-                        Toast.makeText(this, " Audio subido correctamente ✓", Toast.LENGTH_LONG).show();
-                        Log.d("EJERCICIO_7_4", "URL: " + uri.toString());
-                    });
+                    isUploaded = true;
+                    pbUpload.setVisibility(View.GONE);
+                    btnGrabar.setText("Completado");
+                    Toast.makeText(this, "Audio subido al 100% ✓", Toast.LENGTH_LONG).show();
+                    actualizarProgresoFirestore();
                 })
                 .addOnFailureListener(e -> {
-                    Log.e("EJERCICIO_7_4", "Error al subir", e);
-                    Toast.makeText(this, " Error al subir: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     btnSubir.setEnabled(true);
+                    btnGrabar.setEnabled(true);
+                    pbUpload.setVisibility(View.GONE);
+                    Toast.makeText(this, "Error al subir audio", Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void actualizarProgresoFirestore() {
+        if (usuarioID.equals("anonimo")) return;
+        Map<String, Object> progreso = new HashMap<>();
+        progreso.put("idPaciente", usuarioID);
+        progreso.put("logicalId", numeroEjercicio);
+        progreso.put("porcentaje", 100);
+        progreso.put("ultimaModificacion", System.currentTimeMillis());
+        FirebaseFirestore.getInstance().collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .set(progreso);
     }
 
     @Override
@@ -207,11 +269,12 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
         super.onDestroy();
         if (mediaPlayerInstrucciones != null) {
             mediaPlayerInstrucciones.release();
-            mediaPlayerInstrucciones = null;
+        }
+        if (mediaPlayerRecorded != null) {
+            mediaPlayerRecorded.release();
         }
         if (recorder != null) {
             recorder.release();
-            recorder = null;
         }
     }
 }

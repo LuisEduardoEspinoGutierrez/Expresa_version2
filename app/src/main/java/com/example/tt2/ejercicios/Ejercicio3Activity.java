@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
@@ -13,8 +14,11 @@ import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,6 +26,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -29,21 +34,31 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.tt2.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Ejercicio3Activity extends AppCompatActivity {
 
-    MediaPlayer mediaPlayer; 
-    MediaRecorder recorder;
-    String filePath;
+    private MediaPlayer mediaPlayerInstrucciones;
+    private MediaPlayer mediaPlayerRecorded;
+    private MediaRecorder recorder;
+    private String filePath;
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
-    Button btnGrabar, btnDetener, btnSubir;
+    private Button btnGrabar, btnDetener, btnSubir;
+    private ImageButton btnPlayRecorded;
+    private CardView cvPlayback;
+    private ProgressBar pbUpload;
+    
     private String usuarioID;
     private final String numeroEjercicio = "3";
+    private boolean isUploaded = false;
+    private boolean isRecording = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,14 +66,12 @@ public class Ejercicio3Activity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_ejercicio3);
 
-        // Obtener ID del usuario actual de Firebase Auth
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             usuarioID = FirebaseAuth.getInstance().getCurrentUser().getUid();
         } else {
             usuarioID = "anonimo";
         }
 
-        // 🔐 Configurar lanzador de permisos
         requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
             if (isGranted) {
                 startRecording();
@@ -67,18 +80,15 @@ public class Ejercicio3Activity extends AppCompatActivity {
             }
         });
 
-        // Ajuste de márgenes
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
-        // BOTÓN REGRESAR
         ImageView btnBack = findViewById(R.id.ivRegresar);
         btnBack.setOnClickListener(v -> finish());
 
-        // TEXTO CON RESALTADO DE "r"
         TextView tvLectura = findViewById(R.id.tvLectura);
         String texto = "Teresa es una niña que está todo el tiempo cuidando un tesoro que le regaló su abuela al morir. El tesoro no es una caja de oro, tampoco un montón de dinero. El tesoro es un corazón de color morado, donde Teresa guarda todos los recuerdos que le dejó su querida abuela al partir.";
         SpannableString spannable = new SpannableString(texto);
@@ -92,25 +102,30 @@ public class Ejercicio3Activity extends AppCompatActivity {
         }
         tvLectura.setText(spannable);
 
-        // BOTÓN ESCUCHAR INSTRUCCIONES
         Button btnAudio = findViewById(R.id.btnAudioInstrucciones);
-        mediaPlayer = MediaPlayer.create(this, R.raw.r_instrucciones_ejercicio3);
+        mediaPlayerInstrucciones = MediaPlayer.create(this, R.raw.r_instrucciones_ejercicio3);
         btnAudio.setOnClickListener(v -> {
-            if (mediaPlayer != null) {
-                if (mediaPlayer.isPlaying()) {
-                    mediaPlayer.seekTo(0);
+            if (mediaPlayerInstrucciones != null) {
+                if (mediaPlayerInstrucciones.isPlaying()) {
+                    mediaPlayerInstrucciones.seekTo(0);
                 } else {
-                    mediaPlayer.start();
+                    mediaPlayerInstrucciones.start();
                 }
             }
         });
 
-        // BOTONES DE GRABACIÓN
         btnGrabar = findViewById(R.id.btnGrabar);
         btnDetener = findViewById(R.id.btnDetener);
         btnSubir = findViewById(R.id.btnSubir);
+        btnPlayRecorded = findViewById(R.id.btnPlayRecorded);
+        cvPlayback = findViewById(R.id.cvPlayback);
+        pbUpload = findViewById(R.id.pbUpload);
 
         btnGrabar.setOnClickListener(v -> {
+            if (isUploaded) {
+                Toast.makeText(this, "Ya has subido un audio para este ejercicio", Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 startRecording();
             } else {
@@ -120,6 +135,27 @@ public class Ejercicio3Activity extends AppCompatActivity {
 
         btnDetener.setOnClickListener(v -> stopRecording());
         btnSubir.setOnClickListener(v -> uploadAudio());
+        
+        btnPlayRecorded.setOnClickListener(v -> playRecordedAudio());
+
+        checkExistingProgress();
+    }
+
+    private void checkExistingProgress() {
+        if (usuarioID.equals("anonimo")) return;
+        FirebaseFirestore.getInstance().collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Long porcentaje = documentSnapshot.getLong("porcentaje");
+                        if (porcentaje != null && porcentaje >= 100) {
+                            isUploaded = true;
+                            btnGrabar.setEnabled(false);
+                            btnGrabar.setText("Completado");
+                        }
+                    }
+                });
     }
 
     private void startRecording() {
@@ -129,21 +165,22 @@ public class Ejercicio3Activity extends AppCompatActivity {
 
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            
-            // CONFIGURACIÓN RECOMENDADA (AAC / MPEG_4)
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             recorder.setAudioSamplingRate(44100);
             recorder.setAudioEncodingBitRate(96000);
-            
             recorder.setOutputFile(filePath);
 
             recorder.prepare();
             recorder.start();
+            isRecording = true;
 
             btnGrabar.setEnabled(false);
             btnDetener.setEnabled(true);
-            Toast.makeText(this, " Grabando en alta calidad...", Toast.LENGTH_SHORT).show();
+            btnSubir.setEnabled(false);
+            cvPlayback.setVisibility(View.GONE);
+            
+            Toast.makeText(this, "Grabando...", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error al iniciar grabación", Toast.LENGTH_SHORT).show();
@@ -156,66 +193,104 @@ public class Ejercicio3Activity extends AppCompatActivity {
                 recorder.stop();
                 recorder.release();
                 recorder = null;
+                isRecording = false;
+                
                 btnGrabar.setEnabled(true);
+                btnGrabar.setText("Reintentar");
                 btnDetener.setEnabled(false);
-                Toast.makeText(this, "Grabación detenida", Toast.LENGTH_SHORT).show();
+                btnSubir.setEnabled(true);
+                cvPlayback.setVisibility(View.VISIBLE);
+                
+                Toast.makeText(this, "Grabación guardada", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void uploadAudio() {
-        if (filePath == null) {
-            Toast.makeText(this, "Primero graba un audio", Toast.LENGTH_SHORT).show();
-            return;
+    private void playRecordedAudio() {
+        if (filePath == null) return;
+        try {
+            if (mediaPlayerRecorded != null) {
+                mediaPlayerRecorded.release();
+            }
+            mediaPlayerRecorded = new MediaPlayer();
+            mediaPlayerRecorded.setDataSource(filePath);
+            mediaPlayerRecorded.prepare();
+            mediaPlayerRecorded.start();
+            btnPlayRecorded.setImageResource(android.R.drawable.ic_media_pause);
+            mediaPlayerRecorded.setOnCompletionListener(mp -> btnPlayRecorded.setImageResource(android.R.drawable.ic_media_play));
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    private void uploadAudio() {
+        if (filePath == null || isUploaded) return;
 
         File fileObj = new File(filePath);
-        if (!fileObj.exists()) {
-            Toast.makeText(this, "Archivo no encontrado", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (!fileObj.exists()) return;
 
         FirebaseStorage storage = FirebaseStorage.getInstance();
         StorageReference storageRef = storage.getReference();
         Uri file = Uri.fromFile(fileObj);
 
-        // Nueva ruta y nombre de archivo solicitado
-        // audios/ejercicio(numero tal)/[usuarioID]_[numeroEjercicico]_[tipoArchivo]_[timestamp].[extension]
-        String tipoArchivo = "audio";
         long timestamp = System.currentTimeMillis();
-        String extension = "mp4";
-        String fileName = usuarioID + "_eje" + numeroEjercicio + "_" + tipoArchivo + "_" + timestamp + "." + extension;
-        String folderPath = "audios/ejercicio" + numeroEjercicio + "/";
-        
-        StorageReference ref = storageRef.child(folderPath + fileName);
+        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + ".mp4";
+        StorageReference ref = storageRef.child("audios/ejercicio" + numeroEjercicio + "/" + fileName);
 
-        Toast.makeText(this, "Subiendo audio...", Toast.LENGTH_SHORT).show();
+        pbUpload.setVisibility(View.VISIBLE);
+        pbUpload.setProgress(0);
+        btnSubir.setEnabled(false);
+        btnGrabar.setEnabled(false);
 
         ref.putFile(file)
+                .addOnProgressListener(snapshot -> {
+                    double progress = (100.0 * snapshot.getBytesTransferred()) / snapshot.getTotalByteCount();
+                    pbUpload.setProgress((int) progress);
+                })
                 .addOnSuccessListener(taskSnapshot -> {
-                    ref.getDownloadUrl().addOnSuccessListener(uri -> {
-                        Toast.makeText(this, " Audio subido correctamente ✓", Toast.LENGTH_LONG).show();
-                        Log.d("EJERCICIO_3", "URL: " + uri.toString());
-                    });
+                    isUploaded = true;
+                    pbUpload.setVisibility(View.GONE);
+                    btnGrabar.setText("Completado");
+                    Toast.makeText(this, "Audio subido al 100% ✓", Toast.LENGTH_LONG).show();
+                    actualizarProgresoFirestore();
                 })
                 .addOnFailureListener(e -> {
-                    Log.e("EJERCICIO_3", "Error al subir", e);
-                    Toast.makeText(this, " Error al subir: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    btnSubir.setEnabled(true);
+                    btnGrabar.setEnabled(true);
+                    pbUpload.setVisibility(View.GONE);
+                    Toast.makeText(this, "Error al subir audio", Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void actualizarProgresoFirestore() {
+        if (usuarioID.equals("anonimo")) return;
+        
+        Map<String, Object> progreso = new HashMap<>();
+        progreso.put("idPaciente", usuarioID);
+        progreso.put("logicalId", numeroEjercicio);
+        progreso.put("porcentaje", 100);
+        progreso.put("ultimaModificacion", System.currentTimeMillis());
+
+        FirebaseFirestore.getInstance().collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .set(progreso)
+                .addOnSuccessListener(aVoid -> Log.d("DB", "Progreso actualizado"))
+                .addOnFailureListener(e -> Log.e("DB", "Error al actualizar progreso", e));
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mediaPlayer != null) {
-            mediaPlayer.release();
-            mediaPlayer = null;
+        if (mediaPlayerInstrucciones != null) {
+            mediaPlayerInstrucciones.release();
+        }
+        if (mediaPlayerRecorded != null) {
+            mediaPlayerRecorded.release();
         }
         if (recorder != null) {
             recorder.release();
-            recorder = null;
         }
     }
 }

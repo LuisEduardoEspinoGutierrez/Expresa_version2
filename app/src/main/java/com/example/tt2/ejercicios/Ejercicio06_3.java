@@ -15,7 +15,9 @@ import android.text.style.StyleSpan;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,6 +25,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -30,27 +33,32 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.tt2.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickListener {
 
-    // VISTAS
-    ImageView ivRegresarEje063;
-    TextView tvLecturaEje063;
-    Button btnAudioInstruccionesEje063, btnAudioTrabalenguasEje063, btnGrabarEje063, btnDetenerEje063, btnSubirEje063;
+    private ImageView ivRegresarEje063;
+    private TextView tvLecturaEje063;
+    private Button btnAudioInstruccionesEje063, btnAudioTrabalenguasEje063, btnGrabarEje063, btnDetenerEje063, btnSubirEje063;
+    private ImageButton btnPlayRecordedEje063;
+    private CardView cvPlaybackEje063;
+    private ProgressBar pbUploadEje063;
 
-    // AUDIO
-    MediaPlayer mp;
+    private MediaPlayer mp;
     private MediaPlayer mediaPlayerInstrucciones;
-    MediaRecorder recorder;
+    private MediaPlayer mediaPlayerRecorded;
+    private MediaRecorder recorder;
 
-    // VARIABLES
     private String filePath;
     private String usuarioID;
     private final String numeroEjercicio = "6_3";
+    private boolean isUploaded = false;
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
@@ -63,6 +71,10 @@ public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickList
         if (mediaPlayerInstrucciones != null) {
             mediaPlayerInstrucciones.release();
             mediaPlayerInstrucciones = null;
+        }
+        if (mediaPlayerRecorded != null) {
+            mediaPlayerRecorded.release();
+            mediaPlayerRecorded = null;
         }
         if (recorder != null) {
             recorder.release();
@@ -77,7 +89,6 @@ public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickList
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_ejercicio063);
 
-        // Usuario actual
         usuarioID = FirebaseAuth.getInstance().getCurrentUser() != null
                 ? FirebaseAuth.getInstance().getCurrentUser().getUid()
                 : "anonimo";
@@ -88,9 +99,6 @@ public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickList
             return insets;
         });
 
-        // =========================
-        // PERMISOS
-        // =========================
         requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
             if (isGranted) {
                 startRecording();
@@ -99,108 +107,86 @@ public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickList
             }
         });
 
-        // =========================
-        // ASIGNAR VISTAS XML
-        // =========================
         ivRegresarEje063 = findViewById(R.id.ivRegresarEje063);
         tvLecturaEje063 = findViewById(R.id.tvLecturaEje063);
-
         btnAudioInstruccionesEje063 = findViewById(R.id.btnAudioInstruccionesEje063);
         btnAudioTrabalenguasEje063 = findViewById(R.id.btnAudioTrabalenguasEje063);
         btnGrabarEje063 = findViewById(R.id.btnGrabarEje063);
         btnDetenerEje063 = findViewById(R.id.btnDetenerEje063);
         btnSubirEje063 = findViewById(R.id.btnSubirEje063);
+        btnPlayRecordedEje063 = findViewById(R.id.btnPlayRecordedEje063);
+        cvPlaybackEje063 = findViewById(R.id.cvPlaybackEje063);
+        pbUploadEje063 = findViewById(R.id.pbUploadEje063);
 
-        // =========================
-        // CONFIGURACIONES INICIALES
-        // =========================
         btnDetenerEje063.setEnabled(false);
         btnSubirEje063.setEnabled(false);
 
         configurarTexto();
 
-        // Configurar MediaPlayer para instrucciones
         mediaPlayerInstrucciones = MediaPlayer.create(this, R.raw.r_instrucciones_ejercicio7);
 
-        // =========================
-        // EVENTOS
-        // =========================
         ivRegresarEje063.setOnClickListener(this);
-
         btnAudioInstruccionesEje063.setOnClickListener(this);
         btnAudioTrabalenguasEje063.setOnClickListener(this);
         btnGrabarEje063.setOnClickListener(this);
         btnDetenerEje063.setOnClickListener(this);
         btnSubirEje063.setOnClickListener(this);
+        btnPlayRecordedEje063.setOnClickListener(this);
 
+        checkExistingProgress();
     }
 
     private void configurarTexto() {
-
         String texto = "Un burro comía berros y el perro se los \nrobó, el burro lanzó un rebuzno, \ny el perro al barro cayó.";
-
         SpannableString spannable = new SpannableString(texto);
-
         for (int i = 0; i < texto.length(); i++) {
-
             char letra = texto.charAt(i);
-
             if (letra == 'r' || letra == 'R') {
-
                 spannable.setSpan(new ForegroundColorSpan(Color.parseColor("#FF5722")), i, i + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-                spannable.setSpan(
-                        new StyleSpan(Typeface.BOLD),
-                        i,
-                        i + 1,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                );
+                spannable.setSpan(new StyleSpan(Typeface.BOLD), i, i + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
-
         tvLecturaEje063.setText(spannable);
     }
 
+    private void checkExistingProgress() {
+        if (usuarioID.equals("anonimo")) return;
+        FirebaseFirestore.getInstance().collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Long porcentaje = documentSnapshot.getLong("porcentaje");
+                        if (porcentaje != null && porcentaje >= 100) {
+                            isUploaded = true;
+                            btnGrabarEje063.setEnabled(false);
+                            btnGrabarEje063.setText("Completado");
+                        }
+                    }
+                });
+    }
+
     private void startRecording() {
-
         try {
-
-            File file = new File(
-                    getExternalFilesDir(null),
-                    "audio_ejercicio6_3.mp4"
-            );
-
+            File file = new File(getExternalFilesDir(null), "audio_ejercicio6_3.mp4");
             filePath = file.getAbsolutePath();
-
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            
-            // CONFIGURACIÓN AAC / MPEG_4
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             recorder.setAudioSamplingRate(44100);
             recorder.setAudioEncodingBitRate(96000);
-            
             recorder.setOutputFile(filePath);
-
             recorder.prepare();
             recorder.start();
-
             btnGrabarEje063.setEnabled(false);
             btnDetenerEje063.setEnabled(true);
             btnSubirEje063.setEnabled(false);
-
-            Toast.makeText(this,
-                    "Grabando en alta calidad...",
-                    Toast.LENGTH_SHORT).show();
-
+            cvPlaybackEje063.setVisibility(View.GONE);
+            Toast.makeText(this, "Grabando...", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-
             e.printStackTrace();
-
-            Toast.makeText(this,
-                    "Error al iniciar grabación",
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error al iniciar grabación", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -210,83 +196,97 @@ public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickList
                 recorder.stop();
                 recorder.release();
                 recorder = null;
-
                 btnGrabarEje063.setEnabled(true);
+                btnGrabarEje063.setText("Reintentar");
                 btnDetenerEje063.setEnabled(false);
                 btnSubirEje063.setEnabled(true);
-
-                Toast.makeText(this, "Grabación detenida", Toast.LENGTH_SHORT).show();
+                cvPlaybackEje063.setVisibility(View.VISIBLE);
+                Toast.makeText(this, "Grabación guardada", Toast.LENGTH_SHORT).show();
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
+    private void playRecordedAudio() {
+        if (filePath == null) return;
+        try {
+            if (mediaPlayerRecorded != null) {
+                mediaPlayerRecorded.release();
+            }
+            mediaPlayerRecorded = new MediaPlayer();
+            mediaPlayerRecorded.setDataSource(filePath);
+            mediaPlayerRecorded.prepare();
+            mediaPlayerRecorded.start();
+            btnPlayRecordedEje063.setImageResource(android.R.drawable.ic_media_pause);
+            mediaPlayerRecorded.setOnCompletionListener(mp -> btnPlayRecordedEje063.setImageResource(android.R.drawable.ic_media_play));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     private void uploadAudio() {
-        if (filePath == null || !new File(filePath).exists()) {
-            Toast.makeText(this, "Primero graba un audio", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        btnSubirEje063.setEnabled(false);
-
+        if (filePath == null || isUploaded) return;
+        File fileObj = new File(filePath);
+        if (!fileObj.exists()) return;
         FirebaseStorage storage = FirebaseStorage.getInstance();
         StorageReference storageRef = storage.getReference();
-        Uri file = Uri.fromFile(new File(filePath));
-
+        Uri file = Uri.fromFile(fileObj);
         long timestamp = System.currentTimeMillis();
-        String extension = "mp4";
-        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + "." + extension;
-        String folderPath = "audios/ejercicio" + numeroEjercicio + "/";
-
-        StorageReference ref = storageRef.child(folderPath + fileName);
-
-        Toast.makeText(this, "Subiendo audio...", Toast.LENGTH_SHORT).show();
-
+        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + ".mp4";
+        StorageReference ref = storageRef.child("audios/ejercicio" + numeroEjercicio + "/" + fileName);
+        pbUploadEje063.setVisibility(View.VISIBLE);
+        pbUploadEje063.setProgress(0);
+        btnSubirEje063.setEnabled(false);
+        btnGrabarEje063.setEnabled(false);
         ref.putFile(file)
-                .addOnSuccessListener(taskSnapshot ->
-                        ref.getDownloadUrl().addOnSuccessListener(uri -> {
-                            Toast.makeText(this, "Audio subido correctamente ✓", Toast.LENGTH_LONG).show();
-                            Log.d("EJERCICIO_6_3", "URL: " + uri.toString());
-                        })
-                )
+                .addOnProgressListener(snapshot -> {
+                    double progress = (100.0 * snapshot.getBytesTransferred()) / snapshot.getTotalByteCount();
+                    pbUploadEje063.setProgress((int) progress);
+                })
+                .addOnSuccessListener(taskSnapshot -> {
+                    isUploaded = true;
+                    pbUploadEje063.setVisibility(View.GONE);
+                    btnGrabarEje063.setText("Completado");
+                    Toast.makeText(this, "Audio subido al 100% ✓", Toast.LENGTH_LONG).show();
+                    actualizarProgresoFirestore();
+                })
                 .addOnFailureListener(e -> {
-                    Log.e("EJERCICIO_6_3", "Error al subir", e);
-                    Toast.makeText(this, "Error al subir: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     btnSubirEje063.setEnabled(true);
+                    btnGrabarEje063.setEnabled(true);
+                    pbUploadEje063.setVisibility(View.GONE);
+                    Toast.makeText(this, "Error al subir audio", Toast.LENGTH_SHORT).show();
                 });
     }
 
-    private void reproducirAudios(int... audios){
+    private void actualizarProgresoFirestore() {
+        if (usuarioID.equals("anonimo")) return;
+        Map<String, Object> progreso = new HashMap<>();
+        progreso.put("idPaciente", usuarioID);
+        progreso.put("logicalId", "6.3");
+        progreso.put("porcentaje", 100);
+        progreso.put("ultimaModificacion", System.currentTimeMillis());
+        FirebaseFirestore.getInstance().collection("progreso_ejercicios")
+                .document(usuarioID + "_6.3")
+                .set(progreso);
+    }
 
+    private void reproducirAudios(int... audios){
         if(mp != null){
-            try {
-                mp.release();
-            } catch (Exception e){
-                e.printStackTrace();
-            }
+            try { mp.release(); } catch (Exception e){ e.printStackTrace(); }
             mp = null;
         }
-
         if(audios.length == 0) return;
-
         reproducirSecuencia(audios, 0);
     }
 
     private void reproducirSecuencia(int[] audios, int index){
-
         mp = MediaPlayer.create(this, audios[index]);
-
         if(mp == null) return;
-
         mp.start();
-
         mp.setOnCompletionListener(mediaPlayer -> {
             mediaPlayer.release();
-
             int siguiente = index + 1;
-
             if(siguiente < audios.length){
                 reproducirSecuencia(audios, siguiente);
             }
@@ -295,36 +295,21 @@ public class Ejercicio06_3 extends AppCompatActivity implements View.OnClickList
 
     @Override
     public void onClick(View v) {
-
-        if (v.getId() == R.id.ivRegresarEje063) { finish(); }
-
-        else if (v.getId() == R.id.btnAudioInstruccionesEje063) {
+        int id = v.getId();
+        if (id == R.id.ivRegresarEje063) finish();
+        else if (id == R.id.btnAudioTrabalenguasEje063) reproducirAudios(R.raw.trabalenguas_eje6_3);
+        else if (id == R.id.btnAudioInstruccionesEje063) {
             if (mediaPlayerInstrucciones != null) {
-                if (mediaPlayerInstrucciones.isPlaying()) {
-                    mediaPlayerInstrucciones.seekTo(0);
-                } else {
-                    mediaPlayerInstrucciones.start();
-                }
-            }
-        }else if (v.getId() == R.id.btnAudioTrabalenguasEje063) {
-            reproducirAudios(R.raw.trabalenguas_eje6_3);
-        }
-
-        else if (v.getId() == R.id.btnGrabarEje063) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                startRecording();
-            } else {
-                requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+                if (mediaPlayerInstrucciones.isPlaying()) mediaPlayerInstrucciones.seekTo(0);
+                else mediaPlayerInstrucciones.start();
             }
         }
-
-        else if (v.getId() == R.id.btnDetenerEje063) { stopRecording();}
-
-        else if (v.getId() == R.id.btnSubirEje063) { uploadAudio(); }
-    }
-
-    @Override
-    public void onPointerCaptureChanged(boolean hasCapture) {
-        super.onPointerCaptureChanged(hasCapture);
+        else if (id == R.id.btnGrabarEje063) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecording();
+            else requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+        }
+        else if (id == R.id.btnDetenerEje063) stopRecording();
+        else if (id == R.id.btnSubirEje063) uploadAudio();
+        else if (id == R.id.btnPlayRecordedEje063) playRecordedAudio();
     }
 }
