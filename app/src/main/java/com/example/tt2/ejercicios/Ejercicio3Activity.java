@@ -87,7 +87,12 @@ public class Ejercicio3Activity extends AppCompatActivity {
         });
 
         ImageView btnBack = findViewById(R.id.ivRegresar);
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> {
+            if (isRecording) {
+                stopRecording();
+            }
+            finish();
+        });
 
         TextView tvLectura = findViewById(R.id.tvLectura);
         String texto = "Teresa es una niña que está todo el tiempo cuidando un tesoro que le regaló su abuela al morir. El tesoro no es una caja de oro, tampoco un montón de dinero. El tesoro es un corazón de color morado, donde Teresa guarda todos los recuerdos que le dejó su querida abuela al partir.";
@@ -170,6 +175,15 @@ public class Ejercicio3Activity extends AppCompatActivity {
             recorder.setAudioSamplingRate(44100);
             recorder.setAudioEncodingBitRate(96000);
             recorder.setOutputFile(filePath);
+            
+            // Límite de 2 minutos (120,000 ms)
+            recorder.setMaxDuration(120000);
+            recorder.setOnInfoListener((mr, what, extra) -> {
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    stopRecording();
+                    Toast.makeText(Ejercicio3Activity.this, "Límite de 2 minutos alcanzado. Grabación finalizada.", Toast.LENGTH_LONG).show();
+                }
+            });
 
             recorder.prepare();
             recorder.start();
@@ -189,7 +203,7 @@ public class Ejercicio3Activity extends AppCompatActivity {
 
     private void stopRecording() {
         try {
-            if (recorder != null) {
+            if (recorder != null && isRecording) {
                 recorder.stop();
                 recorder.release();
                 recorder = null;
@@ -290,6 +304,11 @@ public class Ejercicio3Activity extends AppCompatActivity {
             mediaPlayerRecorded.release();
         }
         if (recorder != null) {
+            if (isRecording) {
+                try {
+                    recorder.stop();
+                } catch (Exception ignored) {}
+            }
             recorder.release();
         }
     }

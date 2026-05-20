@@ -86,7 +86,12 @@ public class Ejercicio4Activity extends AppCompatActivity {
         });
 
         ImageView btnBack = findViewById(R.id.ivRegresar);
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> {
+            if (isRecording) {
+                stopRecording();
+            }
+            finish();
+        });
 
         TextView tvLectura = findViewById(R.id.tvLectura);
         String texto = "Raúl pega la cara a la ventana del ferrocarril. Mira cómo una mariposa intenta detenerse en un girasol mientras el viento la empuja y queda atrapada en la tela de una araña. Cerca de la estación, un carro ya lo está esperando. Se levanta y corre para bajar del tren, lleva en su mano un arete que encontró en el asiento, con la prisa, se le cae e intenta como un rayo sostenerlo en el aire, pero no lo logra: alcanza a golpearlo y el arete sale disparado, vuela por el aire y cae dentro de un barril lleno de agua sucia. Raúl, decepcionado, sube al auto mientras escucha cómo las ruedas del ferrocarril avanzan lentamente hasta perderse en el horizonte.";
@@ -169,6 +174,14 @@ public class Ejercicio4Activity extends AppCompatActivity {
             recorder.setAudioSamplingRate(44100);
             recorder.setAudioEncodingBitRate(96000);
             recorder.setOutputFile(filePath);
+            
+            recorder.setMaxDuration(120000); // 2 minutos
+            recorder.setOnInfoListener((mr, what, extra) -> {
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    stopRecording();
+                    Toast.makeText(Ejercicio4Activity.this, "Límite de 2 minutos alcanzado.", Toast.LENGTH_LONG).show();
+                }
+            });
 
             recorder.prepare();
             recorder.start();
@@ -188,7 +201,7 @@ public class Ejercicio4Activity extends AppCompatActivity {
 
     private void stopRecording() {
         try {
-            if (recorder != null) {
+            if (recorder != null && isRecording) {
                 recorder.stop();
                 recorder.release();
                 recorder = null;
@@ -274,9 +287,7 @@ public class Ejercicio4Activity extends AppCompatActivity {
 
         FirebaseFirestore.getInstance().collection("progreso_ejercicios")
                 .document(usuarioID + "_" + numeroEjercicio)
-                .set(progreso)
-                .addOnSuccessListener(aVoid -> Log.d("DB", "Progreso actualizado"))
-                .addOnFailureListener(e -> Log.e("DB", "Error al actualizar progreso", e));
+                .set(progreso);
     }
 
     @Override
@@ -289,6 +300,9 @@ public class Ejercicio4Activity extends AppCompatActivity {
             mediaPlayerRecorded.release();
         }
         if (recorder != null) {
+            if (isRecording) {
+                try { recorder.stop(); } catch (Exception ignored) {}
+            }
             recorder.release();
         }
     }

@@ -59,6 +59,7 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
     private String usuarioID;
     private final String numeroEjercicio = "6_2";
     private boolean isUploaded = false;
+    private boolean isRecording = false;
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
@@ -77,6 +78,9 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
             mediaPlayerRecorded = null;
         }
         if (recorder != null) {
+            if (isRecording) {
+                try { recorder.stop(); } catch (Exception ignored) {}
+            }
             recorder.release();
             recorder = null;
         }
@@ -177,8 +181,19 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
             recorder.setAudioSamplingRate(44100);
             recorder.setAudioEncodingBitRate(96000);
             recorder.setOutputFile(filePath);
+
+            recorder.setMaxDuration(120000); // 2 minutos
+            recorder.setOnInfoListener((mr, what, extra) -> {
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    stopRecording();
+                    Toast.makeText(Ejercicio06_2.this, "Límite de 2 minutos alcanzado.", Toast.LENGTH_LONG).show();
+                }
+            });
+
             recorder.prepare();
             recorder.start();
+            isRecording = true;
+
             btnGrabarEje062.setEnabled(false);
             btnDetenerEje062.setEnabled(true);
             btnSubirEje062.setEnabled(false);
@@ -192,10 +207,12 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
 
     private void stopRecording() {
         try {
-            if (recorder != null) {
+            if (recorder != null && isRecording) {
                 recorder.stop();
                 recorder.release();
                 recorder = null;
+                isRecording = false;
+                
                 btnGrabarEje062.setEnabled(true);
                 btnGrabarEje062.setText("Reintentar");
                 btnDetenerEje062.setEnabled(false);
@@ -296,7 +313,10 @@ public class Ejercicio06_2 extends AppCompatActivity implements View.OnClickList
     @Override
     public void onClick(View v) {
         int id = v.getId();
-        if (id == R.id.ivRegresarEje062) finish();
+        if (id == R.id.ivRegresarEje062) {
+            if (isRecording) stopRecording();
+            finish();
+        }
         else if (id == R.id.btnAudioTrabalenguasEje062) reproducirAudios(R.raw.trabalenguas_eje6_2);
         else if (id == R.id.btnAudioInstruccionesEje062) {
             if (mediaPlayerInstrucciones != null) {

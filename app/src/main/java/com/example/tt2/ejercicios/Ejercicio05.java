@@ -120,7 +120,12 @@ public class Ejercicio05 extends AppCompatActivity {
         // =========================
         // EVENTOS
         // =========================
-        ivRegresarEje05.setOnClickListener(v -> finish());
+        ivRegresarEje05.setOnClickListener(v -> {
+            if (isRecording) {
+                stopRecording();
+            }
+            finish();
+        });
 
         btnAudioInstruccionesEje05.setOnClickListener(v -> {
             if (mediaPlayerInstrucciones != null) {
@@ -195,6 +200,15 @@ public class Ejercicio05 extends AppCompatActivity {
             recorder.setAudioEncodingBitRate(96000);
             recorder.setOutputFile(filePath);
 
+            // Límite de 2 minutos (120,000 ms)
+            recorder.setMaxDuration(120000);
+            recorder.setOnInfoListener((mr, what, extra) -> {
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    stopRecording();
+                    Toast.makeText(Ejercicio05.this, "Límite de 2 minutos alcanzado. Grabación finalizada.", Toast.LENGTH_LONG).show();
+                }
+            });
+
             recorder.prepare();
             recorder.start();
             isRecording = true;
@@ -213,7 +227,7 @@ public class Ejercicio05 extends AppCompatActivity {
 
     private void stopRecording() {
         try {
-            if (recorder != null) {
+            if (recorder != null && isRecording) {
                 recorder.stop();
                 recorder.release();
                 recorder = null;
@@ -314,6 +328,11 @@ public class Ejercicio05 extends AppCompatActivity {
             mediaPlayerRecorded.release();
         }
         if (recorder != null) {
+            if (isRecording) {
+                try {
+                    recorder.stop();
+                } catch (Exception ignored) {}
+            }
             recorder.release();
         }
     }

@@ -48,8 +48,9 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
     private MediaRecorder recorder;
     private String filePath;
     private String usuarioID;
-    private final String numeroEjercicio = "7.4";
+    private final String numeroEjercicio = "7_4";
     private boolean isUploaded = false;
+    private boolean isRecording = false;
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
@@ -83,7 +84,12 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
         });
 
         ImageView btnBack = findViewById(R.id.ivRegresar);
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> {
+            if (isRecording) {
+                stopRecording();
+            }
+            finish();
+        });
 
         TextView tvLectura = findViewById(R.id.tvLectura);
         String texto = "Rodolfo el cerrajero vende herrajes y cerrojos en su cerrajería, coloca herrajes y abre cerrojos de rejas.";
@@ -167,8 +173,18 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
             recorder.setAudioSamplingRate(44100);
             recorder.setAudioEncodingBitRate(96000);
             recorder.setOutputFile(filePath);
+
+            recorder.setMaxDuration(120000); // 2 minutos
+            recorder.setOnInfoListener((mr, what, extra) -> {
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    stopRecording();
+                    Toast.makeText(Ejercicio7_4Activity.this, "Límite de 2 minutos alcanzado.", Toast.LENGTH_LONG).show();
+                }
+            });
+
             recorder.prepare();
             recorder.start();
+            isRecording = true;
 
             btnGrabar.setEnabled(false);
             btnDetener.setEnabled(true);
@@ -183,10 +199,12 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
 
     private void stopRecording() {
         try {
-            if (recorder != null) {
+            if (recorder != null && isRecording) {
                 recorder.stop();
                 recorder.release();
                 recorder = null;
+                isRecording = false;
+
                 btnGrabar.setEnabled(true);
                 btnGrabar.setText("Reintentar");
                 btnDetener.setEnabled(false);
@@ -274,6 +292,9 @@ public class Ejercicio7_4Activity extends AppCompatActivity {
             mediaPlayerRecorded.release();
         }
         if (recorder != null) {
+            if (isRecording) {
+                try { recorder.stop(); } catch (Exception ignored) {}
+            }
             recorder.release();
         }
     }

@@ -59,6 +59,7 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
     private String usuarioID;
     private final String numeroEjercicio = "6_5";
     private boolean isUploaded = false;
+    private boolean isRecording = false;
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
@@ -77,6 +78,9 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
             mediaPlayerRecorded = null;
         }
         if (recorder != null) {
+            if (isRecording) {
+                try { recorder.stop(); } catch (Exception ignored) {}
+            }
             recorder.release();
             recorder = null;
         }
@@ -177,8 +181,19 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
             recorder.setAudioSamplingRate(44100);
             recorder.setAudioEncodingBitRate(96000);
             recorder.setOutputFile(filePath);
+
+            recorder.setMaxDuration(120000); // 2 minutos
+            recorder.setOnInfoListener((mr, what, extra) -> {
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    stopRecording();
+                    Toast.makeText(Ejercicio06_5.this, "Límite de 2 minutos alcanzado.", Toast.LENGTH_LONG).show();
+                }
+            });
+
             recorder.prepare();
             recorder.start();
+            isRecording = true;
+
             btnGrabarEje065.setEnabled(false);
             btnDetenerEje065.setEnabled(true);
             btnSubirEje065.setEnabled(false);
@@ -192,10 +207,12 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
 
     private void stopRecording() {
         try {
-            if (recorder != null) {
+            if (recorder != null && isRecording) {
                 recorder.stop();
                 recorder.release();
                 recorder = null;
+                isRecording = false;
+                
                 btnGrabarEje065.setEnabled(true);
                 btnGrabarEje065.setText("Reintentar");
                 btnDetenerEje065.setEnabled(false);
@@ -233,8 +250,8 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
         StorageReference storageRef = storage.getReference();
         Uri file = Uri.fromFile(fileObj);
         long timestamp = System.currentTimeMillis();
-        String fileName = usuarioID + "_eje" + numeroEjercicio + "_audio_" + timestamp + ".mp4";
-        StorageReference ref = storageRef.child("audios/ejercicio" + numeroEjercicio + "/" + fileName);
+        String fileName = usuarioID + "_eje6_5_audio_" + timestamp + ".mp4";
+        StorageReference ref = storageRef.child("audios/ejercicio6_5/" + fileName);
         pbUploadEje065.setVisibility(View.VISIBLE);
         pbUploadEje065.setProgress(0);
         btnSubirEje065.setEnabled(false);
@@ -296,7 +313,10 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
     @Override
     public void onClick(View v) {
         int id = v.getId();
-        if (id == R.id.ivRegresarEje065) finish();
+        if (id == R.id.ivRegresarEje065) {
+            if (isRecording) stopRecording();
+            finish();
+        }
         else if (id == R.id.btnAudioTrabalenguasEje065) reproducirAudios(R.raw.trabalenguas_eje6_5);
         else if (id == R.id.btnAudioInstruccionesEje065) {
             if (mediaPlayerInstrucciones != null) {
@@ -305,6 +325,10 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
             }
         }
         else if (id == R.id.btnGrabarEje065) {
+            if (isUploaded) {
+                Toast.makeText(this, "Ya has subido un audio para este ejercicio", Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecording();
             else requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
         }
