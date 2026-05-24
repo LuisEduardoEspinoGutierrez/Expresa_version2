@@ -65,6 +65,7 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
     private FirebaseFirestore db;
     int contadorIntentos = 0;
     boolean palabraGenerada = false;
+    private boolean isRecording = false;
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
@@ -79,6 +80,11 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
             mediaPlayerInstrucciones = null;
         }
         if (recorder != null) {
+            if (isRecording) {
+                try {
+                    recorder.stop();
+                } catch (Exception ignored) {}
+            }
             recorder.release();
             recorder = null;
         }
@@ -339,10 +345,20 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             recorder.setAudioSamplingRate(44100);
             recorder.setAudioEncodingBitRate(96000);
-            
             recorder.setOutputFile(filePath);
+
+            // Límite de 2 minutos (120,000 ms)
+            recorder.setMaxDuration(120000);
+            recorder.setOnInfoListener((mr, what, extra) -> {
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    stopRecording();
+                    Toast.makeText(Ejercicio13.this, "Límite de 2 minutos alcanzado. Grabación finalizada.", Toast.LENGTH_LONG).show();
+                }
+            });
+
             recorder.prepare();
             recorder.start();
+            isRecording = true;
 
             btnGrabarEje13.setEnabled(false);
             btnDetenerEje13.setEnabled(true);
@@ -358,10 +374,11 @@ public class Ejercicio13 extends AppCompatActivity implements View.OnClickListen
 
     private void stopRecording() {
         try {
-            if (recorder != null) {
+            if (recorder != null && isRecording) {
                 recorder.stop();
                 recorder.release();
                 recorder = null;
+                isRecording = false;
 
                 contadorIntentos++;
                 btnDetenerEje13.setEnabled(false);

@@ -18,6 +18,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TT2">
         <activity
+            android:name=".rewards.Reward2"
+            android:exported="false" />
+        <activity
+            android:name=".rewards.Reward1"
+            android:exported="false" />
+        <activity
             android:name=".ejercicios.Ejercicio14"
             android:exported="false" />
         <activity

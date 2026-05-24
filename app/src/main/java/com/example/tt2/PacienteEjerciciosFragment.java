@@ -32,7 +32,7 @@ import java.util.Map;
 
 /**
  * Fragmento que muestra la lista de ejercicios asignados al Paciente (Niño)
- * por su terapeuta para que pueda realizarlos.
+ * organizado por prioridad de completado: 0%, En Progreso, y 100%.
  */
 public class PacienteEjerciciosFragment extends Fragment {
 
@@ -99,7 +99,7 @@ public class PacienteEjerciciosFragment extends Fragment {
                                 mapaProgreso.put(logId, porcentaje.intValue());
                             }
                         }
-                        if (adapter != null) adapter.notifyDataSetChanged();
+                        ordenarEjercicios();
                     }
                 });
     }
@@ -121,13 +121,33 @@ public class PacienteEjerciciosFragment extends Fragment {
                             AsignacionPaciente asig = doc.toObject(AsignacionPaciente.class);
                             listaEjercicios.add(asig);
                         }
-                        Collections.sort(listaEjercicios, (o1, o2) -> Long.compare(o2.fechaAsignacion, o1.fechaAsignacion));
-                    }
-                    
-                    if (adapter != null) {
-                        adapter.notifyDataSetChanged();
+                        ordenarEjercicios();
                     }
                 });
+    }
+
+    private void ordenarEjercicios() {
+        if (listaEjercicios == null || listaEjercicios.isEmpty()) return;
+
+        Collections.sort(listaEjercicios, (o1, o2) -> {
+            int p1 = mapaProgreso.getOrDefault(o1.logicalId, 0);
+            int p2 = mapaProgreso.getOrDefault(o2.logicalId, 0);
+
+            // Determinar categoría (0: 0%, 1: 1-99%, 2: 100%)
+            int cat1 = (p1 == 0) ? 0 : (p1 == 100) ? 2 : 1;
+            int cat2 = (p2 == 0) ? 0 : (p2 == 100) ? 2 : 1;
+
+            if (cat1 != cat2) {
+                return Integer.compare(cat1, cat2);
+            }
+            
+            // Si están en la misma categoría, ordenar por fecha (más reciente arriba)
+            return Long.compare(o2.fechaAsignacion, o1.fechaAsignacion);
+        });
+
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
     }
 
     private class EjerciciosPacienteAdapter extends RecyclerView.Adapter<EjerciciosPacienteAdapter.ViewHolder> {
@@ -209,7 +229,7 @@ public class PacienteEjerciciosFragment extends Fragment {
                 .delete()
                 .addOnSuccessListener(aVoid -> {
                     mapaProgreso.put(logicalId, 0);
-                    adapter.notifyDataSetChanged();
+                    ordenarEjercicios();
                     abrirEjercicio(logicalId);
                 });
     }

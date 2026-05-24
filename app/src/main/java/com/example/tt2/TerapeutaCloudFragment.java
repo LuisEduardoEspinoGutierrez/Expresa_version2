@@ -23,6 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.storage.FirebaseStorage;
@@ -33,9 +34,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public class TerapeutaCloudFragment extends Fragment {
 
@@ -46,8 +49,10 @@ public class TerapeutaCloudFragment extends Fragment {
 
     private List<String> listPacientesNombres;
     private Map<String, List<AudioItem>> mapAudiosPorPaciente;
+    private Map<String, List<Object>> mapItemsPorPaciente;
     private Map<String, String> uidToNameMap;
     private Map<String, String> numEjeToNombreMap;
+    private Set<String> seenAudioPaths;
 
     private FirebaseFirestore db;
     private FirebaseStorage storage;
@@ -56,6 +61,7 @@ public class TerapeutaCloudFragment extends Fragment {
     private AudioItem currentlyPlayingItem = null;
     private Handler progressHandler = new Handler();
     private Runnable updateSeekBarRunnable;
+    private String usuarioID;
 
     public TerapeutaCloudFragment() {
     }
@@ -73,6 +79,12 @@ public class TerapeutaCloudFragment extends Fragment {
         numEjeToNombreMap = new HashMap<>();
         listPacientesNombres = new ArrayList<>();
         mapAudiosPorPaciente = new HashMap<>();
+        mapItemsPorPaciente = new HashMap<>();
+        seenAudioPaths = new HashSet<>();
+
+        usuarioID = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid()
+                : "anonimo";
     }
 
     @Override
@@ -105,7 +117,6 @@ public class TerapeutaCloudFragment extends Fragment {
                         String num = doc.getString("numeroEjercicio");
                         String nombre = doc.getString("nombre");
                         if (num != null && nombre != null) {
-                            // Guardamos tanto con punto como con guion para asegurar match
                             numEjeToNombreMap.put(num, nombre);
                             numEjeToNombreMap.put(num.replace(".", "_"), nombre);
                         }
@@ -114,7 +125,7 @@ public class TerapeutaCloudFragment extends Fragment {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error al cargar ejercicios", e);
-                    cargarUsuarios(); // Intentar cargar usuarios aunque fallen los nombres de ejercicios
+                    cargarUsuarios();
                 });
     }
 
@@ -127,10 +138,28 @@ public class TerapeutaCloudFragment extends Fragment {
                         String nombre = doc.getString("nombre");
                         uidToNameMap.put(doc.getId(), nombre != null ? nombre : "Sin nombre");
                     }
-                    buscarAudiosEnStorage();
+                    cargarAudiosVistos();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error al cargar usuarios", e);
+                    cargarAudiosVistos();
+                });
+    }
+
+    private void cargarAudiosVistos() {
+        db.collection("audios_vistos")
+                .whereEqualTo("vistoPor", usuarioID)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    seenAudioPaths.clear();
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        String path = doc.getString("audioPath");
+                        if (path != null) seenAudioPaths.add(path);
+                    }
+                    buscarAudiosEnStorage();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error cargando audios vistos", e);
                     buscarAudiosEnStorage();
                 });
     }
@@ -188,6 +217,7 @@ public class TerapeutaCloudFragment extends Fragment {
                 audio.rawNumEje = numEje;
                 audio.fecha = timestamp;
                 audio.ref = item;
+                audio.visto = seenAudioPaths.contains(item.getPath());
 
                 synchronized (this) {
                     if (!mapAudiosPorPaciente.containsKey(pacienteNombre)) {
@@ -222,6 +252,8 @@ public class TerapeutaCloudFragment extends Fragment {
                 });
             }
 
+            organizarSecciones();
+
             if (progressBar != null) progressBar.setVisibility(View.GONE);
             adapter.notifyDataSetChanged();
             if (listPacientesNombres.isEmpty()) {
@@ -230,6 +262,33 @@ public class TerapeutaCloudFragment extends Fragment {
                 elvAudios.expandGroup(0);
             }
         });
+    }
+
+    private void organizarSecciones() {
+        mapItemsPorPaciente.clear();
+        for (String paciente : listPacientesNombres) {
+            List<AudioItem> allAudios = mapAudiosPorPaciente.get(paciente);
+            if (allAudios == null) continue;
+
+            List<AudioItem> recent = new ArrayList<>();
+            List<AudioItem> history = new ArrayList<>();
+
+            for (AudioItem item : allAudios) {
+                if (item.visto) history.add(item);
+                else recent.add(item);
+            }
+
+            List<Object> items = new ArrayList<>();
+            if (!recent.isEmpty()) {
+                items.add("Agregados recientemente");
+                items.addAll(recent);
+            }
+            if (!history.isEmpty()) {
+                items.add("Historial de audios");
+                items.addAll(history);
+            }
+            mapItemsPorPaciente.put(paciente, items);
+        }
     }
 
     private int compareEjercicios(String e1, String e2) {
@@ -246,6 +305,25 @@ public class TerapeutaCloudFragment extends Fragment {
         } catch (Exception e) {
             return e1.compareTo(e2);
         }
+    }
+
+    private void marcarComoVisto(AudioItem item) {
+        if (item.visto || usuarioID.equals("anonimo")) return;
+        
+        item.visto = true;
+        seenAudioPaths.add(item.ref.getPath());
+        
+        Map<String, Object> data = new HashMap<>();
+        data.put("audioPath", item.ref.getPath());
+        data.put("vistoPor", usuarioID);
+        data.put("fechaVisto", System.currentTimeMillis());
+
+        db.collection("audios_vistos")
+                .add(data)
+                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar visto", e));
+        
+        organizarSecciones();
+        adapter.notifyDataSetChanged();
     }
 
     private void reproducirAudio(AudioItem item) {
@@ -279,6 +357,7 @@ public class TerapeutaCloudFragment extends Fragment {
                     item.isPlaying = false;
                     currentlyPlayingItem = null;
                     stopSeekBarUpdate();
+                    marcarComoVisto(item); // Marcar como visto al finalizar la reproducción
                     adapter.notifyDataSetChanged();
                 });
             } catch (Exception e) {
@@ -342,21 +421,33 @@ public class TerapeutaCloudFragment extends Fragment {
         public int getGroupCount() { return listPacientesNombres.size(); }
         @Override
         public int getChildrenCount(int groupPosition) {
-            List<AudioItem> audios = mapAudiosPorPaciente.get(listPacientesNombres.get(groupPosition));
-            return audios != null ? audios.size() : 0;
+            List<Object> items = mapItemsPorPaciente.get(listPacientesNombres.get(groupPosition));
+            return items != null ? items.size() : 0;
         }
         @Override
         public Object getGroup(int groupPosition) { return listPacientesNombres.get(groupPosition); }
         @Override
         public Object getChild(int groupPosition, int childPosition) {
-            return mapAudiosPorPaciente.get(listPacientesNombres.get(groupPosition)).get(childPosition);
+            List<Object> items = mapItemsPorPaciente.get(listPacientesNombres.get(groupPosition));
+            return items != null ? items.get(childPosition) : null;
         }
         @Override
         public long getGroupId(int groupPosition) { return groupPosition; }
         @Override
         public long getChildId(int groupPosition, int childPosition) { return childPosition; }
         @Override
-        public boolean hasStableIds() { return true; }
+        public boolean hasStableIds() { return false; }
+
+        @Override
+        public int getChildTypeCount() {
+            return 2;
+        }
+
+        @Override
+        public int getChildType(int groupPosition, int childPosition) {
+            Object item = getChild(groupPosition, childPosition);
+            return (item instanceof String) ? 0 : 1;
+        }
 
         @Override
         public View getGroupView(int groupPosition, boolean isExpanded, View convertView, ViewGroup parent) {
@@ -374,9 +465,21 @@ public class TerapeutaCloudFragment extends Fragment {
 
         @Override
         public View getChildView(int groupPosition, int childPosition, boolean isLastChild, View convertView, ViewGroup parent) {
-            if (convertView == null) {
+            int type = getChildType(groupPosition, childPosition);
+
+            if (type == 0) {
+                if (convertView == null) {
+                    convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_audio_subheader, parent, false);
+                }
+                TextView tv = convertView.findViewById(R.id.tvSubheader);
+                tv.setText((String) getChild(groupPosition, childPosition));
+                return convertView;
+            }
+
+            if (convertView == null || convertView.findViewById(R.id.tvAudioEjercicio) == null) {
                 convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_audio_child, parent, false);
             }
+            
             AudioItem item = (AudioItem) getChild(groupPosition, childPosition);
             TextView tvEje = convertView.findViewById(R.id.tvAudioEjercicio);
             TextView tvFecha = convertView.findViewById(R.id.tvAudioFecha);
@@ -421,7 +524,9 @@ public class TerapeutaCloudFragment extends Fragment {
         }
 
         @Override
-        public boolean isChildSelectable(int groupPosition, int childPosition) { return true; }
+        public boolean isChildSelectable(int groupPosition, int childPosition) { 
+            return getChildType(groupPosition, childPosition) == 1; 
+        }
     }
 
     private static class AudioItem {
@@ -430,5 +535,6 @@ public class TerapeutaCloudFragment extends Fragment {
         long fecha;
         StorageReference ref;
         boolean isPlaying = false;
+        boolean visto = false;
     }
 }

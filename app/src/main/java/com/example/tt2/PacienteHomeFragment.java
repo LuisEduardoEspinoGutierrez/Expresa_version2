@@ -1,64 +1,160 @@
 package com.example.tt2;
 
 import android.os.Bundle;
-
-import androidx.fragment.app.Fragment;
-
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link PacienteHomeFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
 public class PacienteHomeFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
-
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    private TextView tvHola, tvFrase, tvTerminados, tvEnProgreso, tvPendientes, tvPuntos;
+    private ProgressBar progressBar;
+    
+    private FirebaseFirestore db;
+    private String currentUserId;
+    
+    private final String[] frasesMotivadoras = {
+            "¡Hoy es un gran día para aprender!",
+            "¡Sigue esforzándote, lo haces genial!",
+            "¡Cada paso cuenta, sigue adelante!",
+            "¡Eres muy inteligente y capaz!",
+            "¡Tu esfuerzo dará grandes frutos!",
+            "¡Sigue practicando y serás un experto!",
+            "¡Me encanta ver cómo progresas!"
+    };
 
     public PacienteHomeFragment() {
-        // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment PacienteHomeFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static PacienteHomeFragment newInstance(String param1, String param2) {
-        PacienteHomeFragment fragment = new PacienteHomeFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
+    public static PacienteHomeFragment newInstance() {
+        return new PacienteHomeFragment();
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+        db = FirebaseFirestore.getInstance();
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+            currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        } else {
+            currentUserId = "anonimo";
         }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_home_paciente, container, false);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        tvHola = view.findViewById(R.id.tvHolaPaciente);
+        tvFrase = view.findViewById(R.id.tvFraseMotivadora);
+        tvTerminados = view.findViewById(R.id.tvTerminados);
+        tvEnProgreso = view.findViewById(R.id.tvEnProgreso);
+        tvPendientes = view.findViewById(R.id.tvPendientes);
+        tvPuntos = view.findViewById(R.id.tvPuntos);
+        progressBar = view.findViewById(R.id.pbHomePaciente);
+
+        mostrarFraseAleatoria();
+        cargarNombrePaciente();
+        cargarEstadisticas();
+    }
+
+    private void mostrarFraseAleatoria() {
+        Random random = new Random();
+        int index = random.nextInt(frasesMotivadoras.length);
+        tvFrase.setText(frasesMotivadoras[index]);
+    }
+
+    private void cargarNombrePaciente() {
+        if (currentUserId.equals("anonimo")) return;
+        
+        db.collection("usuarios").document(currentUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (isAdded() && documentSnapshot.exists()) {
+                        String nombre = documentSnapshot.getString("nombre");
+                        tvHola.setText("¡Hola, " + (nombre != null ? nombre : "amigo") + "!");
+                    }
+                });
+    }
+
+    private void cargarEstadisticas() {
+        if (currentUserId.equals("anonimo")) return;
+        
+        progressBar.setVisibility(View.VISIBLE);
+
+        // Primero obtenemos los ejercicios asignados para saber el total y los pendientes
+        db.collection("pacientes_ejercicios")
+                .whereEqualTo("idPaciente", currentUserId)
+                .get()
+                .addOnSuccessListener(asignaciones -> {
+                    int totalAsignados = asignaciones.size();
+                    Map<String, Boolean> ejerciciosAsignados = new HashMap<>();
+                    for (QueryDocumentSnapshot doc : asignaciones) {
+                        String logId = doc.getString("logicalId");
+                        if (logId != null) ejerciciosAsignados.put(logId, true);
+                    }
+
+                    // Luego obtenemos el progreso para clasificar
+                    db.collection("progreso_ejercicios")
+                            .whereEqualTo("idPaciente", currentUserId)
+                            .get()
+                            .addOnSuccessListener(progresos -> {
+                                int terminados = 0;
+                                int enProgreso = 0;
+                                
+                                for (QueryDocumentSnapshot doc : progresos) {
+                                    String logId = doc.getString("logicalId");
+                                    Long porcentaje = doc.getLong("porcentaje");
+                                    
+                                    // Solo contamos si el ejercicio está asignado
+                                    if (logId != null && ejerciciosAsignados.containsKey(logId)) {
+                                        if (porcentaje != null) {
+                                            if (porcentaje >= 100) {
+                                                terminados++;
+                                            } else if (porcentaje > 0) {
+                                                enProgreso++;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                int pendientes = totalAsignados - terminados - enProgreso;
+
+                                if (isAdded()) {
+                                    tvTerminados.setText(String.valueOf(terminados));
+                                    tvEnProgreso.setText(String.valueOf(enProgreso));
+                                    tvPendientes.setText(String.valueOf(pendientes));
+                                    progressBar.setVisibility(View.GONE);
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                if (isAdded()) progressBar.setVisibility(View.GONE);
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    if (isAdded()) progressBar.setVisibility(View.GONE);
+                });
     }
 }
