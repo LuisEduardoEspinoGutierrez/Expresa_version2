@@ -22,6 +22,7 @@ public class Reward1 extends AppCompatActivity implements View.OnClickListener {
             ivC1, ivC2, ivC3,
             ivRp1, ivRp2,
             ivReward1;
+    View btnRegresarBarra;
     MaterialCardView cardReward;
     boolean EscLocked1 = false, EscLocked2 = false, RpLocked1 = false, RpLocked2 = false, CLocked1 = false, CLocked2 = false, CLocked3 = false;
     MediaPlayer mp;
@@ -64,6 +65,7 @@ public class Reward1 extends AppCompatActivity implements View.OnClickListener {
         ivRp1 = findViewById(R.id.ivRp1);
         ivRp2 = findViewById(R.id.ivRp2);
         ivRegresarRew1 = findViewById(R.id.ivRegresarRew1);
+        btnRegresarBarra = findViewById(R.id.btnRegresarBarra);
 
         ivEsc1.setOnClickListener(this);
         ivEsc2.setOnClickListener(this);
@@ -72,6 +74,10 @@ public class Reward1 extends AppCompatActivity implements View.OnClickListener {
         ivC3.setOnClickListener(this);
         ivRp1.setOnClickListener(this);
         ivRp2.setOnClickListener(this);
+        ivRegresarRew1.setOnClickListener(this);
+        if (btnRegresarBarra != null) {
+            btnRegresarBarra.setOnClickListener(this);
+        }
     }
 
     private void reproducirAudios(int... audios) {
@@ -137,7 +143,7 @@ public class Reward1 extends AppCompatActivity implements View.OnClickListener {
 
     @Override
     public void onClick(View v) {
-        if (v.getId() == R.id.ivRegresarRew1) {
+        if (v.getId() == R.id.ivRegresarRew1 || v.getId() == R.id.btnRegresarBarra) {
             finish();
         }
         else if (v.getId() == R.id.ivEsc1) {

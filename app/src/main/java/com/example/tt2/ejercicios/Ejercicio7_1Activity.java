@@ -48,7 +48,7 @@ public class Ejercicio7_1Activity extends AppCompatActivity {
     private MediaRecorder recorder;
     private String filePath;
     private String usuarioID;
-    private final String numeroEjercicio = "7_1";
+    private final String numeroEjercicio = "7.1";
     private boolean isUploaded = false;
     private boolean isRecording = false;
 

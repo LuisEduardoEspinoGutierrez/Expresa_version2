@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    tools:context=".ejercicios.Ejercicio16">
+
+    <!-- Barra de regreso superior -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:background="#38A9F5"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/ivRegresarEje16"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/icon_back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/regresar"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            android:layout_marginStart="12dp"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="15dp">
+
+            <!-- Caja de Instrucciones -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#38A9F5"
+                app:strokeWidth="2dp"
+                app:cardBackgroundColor="#38A9F5"
+                android:layout_marginBottom="15dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="15dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Instrucciones"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"/>
+
+                        <Button
+                            android:id="@+id/btnAudioInstruccionesEje16"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Escuchar"
+                            android:textAllCaps="false"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF"
+                            app:icon="@android:drawable/ic_media_play"
+                            app:iconSize="20dp"
+                            app:iconTint="#FFFFFF"
+                            app:iconPadding="10dp"
+                            app:iconGravity="textStart"
+                            android:backgroundTint="#FFA726"
+                            app:cornerRadius="20dp"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="1. Observa el video del modelo.\n2. Presiona el botón 'Grabar Video' para replicar el ejercicio."
+                        android:textSize="18sp"
+                        android:textColor="@color/white"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginTop="6dp"/>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Contenedor del Video -->
+            <FrameLayout
+                android:id="@+id/videoContainer"
+                android:layout_width="match_parent"
+                android:layout_height="350dp"
+                android:background="#000000">
+
+                <TextureView
+                    android:id="@+id/textureViewEjercicio16"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center" />
+
+                <!-- Imagen de previsualización -->
+                <ImageView
+                    android:id="@+id/ivVideoPreviewEje16"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:visibility="visible" />
+            </FrameLayout>
+
+            <!-- Controles del Video -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="10dp">
+
+                <Button
+                    android:id="@+id/btnPlayVideoEje16"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Reproducir"
+                    android:layout_marginEnd="10dp"
+                    android:backgroundTint="#4CAF50"
+                    android:textColor="#FFFFFF"
+                    app:icon="@android:drawable/ic_media_play" />
+
+                <Button
+                    android:id="@+id/btnPauseVideoEje16"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pausa"
+                    android:backgroundTint="#F44336"
+                    android:textColor="#FFFFFF"
+                    app:icon="@android:drawable/ic_media_pause" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Botón de acción inferior -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <Button
+            android:id="@+id/btnGrabarVideoEje16"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Grabar Video"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:backgroundTint="#38A9F5"
+            android:textColor="#FFFFFF"
+            app:cornerRadius="12dp"/>
+    </LinearLayout>
+
+</LinearLayout>

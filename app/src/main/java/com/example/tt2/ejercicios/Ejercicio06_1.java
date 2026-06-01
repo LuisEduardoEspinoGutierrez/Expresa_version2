@@ -56,7 +56,7 @@ public class Ejercicio06_1 extends AppCompatActivity implements View.OnClickList
 
     private String filePath;
     private String usuarioID;
-    private final String numeroEjercicio = "6_1";
+    private final String numeroEjercicio = "6.1";
     private boolean isUploaded = false;
     private boolean isRecording = false;
 
@@ -279,11 +279,11 @@ public class Ejercicio06_1 extends AppCompatActivity implements View.OnClickList
         if (usuarioID.equals("anonimo")) return;
         Map<String, Object> progreso = new HashMap<>();
         progreso.put("idPaciente", usuarioID);
-        progreso.put("logicalId", "6.1");
+        progreso.put("logicalId", numeroEjercicio);
         progreso.put("porcentaje", 100);
         progreso.put("ultimaModificacion", System.currentTimeMillis());
         FirebaseFirestore.getInstance().collection("progreso_ejercicios")
-                .document(usuarioID + "_6.1")
+                .document(usuarioID + "_" + numeroEjercicio)
                 .set(progreso);
     }
 

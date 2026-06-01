@@ -1,14 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F7FA"
+    android:padding="16dp"
     tools:context=".TerapeutaRecompensasFragment">
 
-    <!-- TODO: Update blank fragment layout -->
     <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Recompensas Asignadas a Pacientes"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Panel de recompensas ya asignadas a pacientes -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvAsignacionesPacientes"
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:background="#FFFFFF"
+        android:layout_marginBottom="16dp"
+        android:elevation="2dp"
+        tools:listitem="@layout/item_asignacion_recompensa_admin" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#DDDDDD"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Mis Recompensas Disponibles"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Recompensas que el terapeuta tiene y puede asignar -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvRecompensasDisponibles"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:text="recompensas de terapeuta" />
+        tools:listitem="@layout/item_recompensa_terapeuta" />
 
-</FrameLayout>
+</LinearLayout>

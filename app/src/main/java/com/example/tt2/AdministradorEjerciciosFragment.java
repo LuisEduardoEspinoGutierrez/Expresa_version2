@@ -1,6 +1,7 @@
 package com.example.tt2;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -17,6 +18,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.tt2.ejercicios.Ejercicio16;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -87,6 +89,14 @@ public class AdministradorEjerciciosFragment extends Fragment {
         Button btnCargarFirestore = view.findViewById(R.id.btnCargarFirestore);
         if (btnCargarFirestore != null) {
             btnCargarFirestore.setOnClickListener(v -> sincronizarEjercicios());
+        }
+
+        Button btnIrEjercicio16 = view.findViewById(R.id.btnIrEjercicio16);
+        if (btnIrEjercicio16 != null) {
+            btnIrEjercicio16.setOnClickListener(v -> {
+                Intent intent = new Intent(getActivity(), Ejercicio16.class);
+                startActivity(intent);
+            });
         }
     }
 
@@ -332,6 +342,7 @@ public class AdministradorEjerciciosFragment extends Fragment {
         listaDefinida.add(new Ejercicio("13", "Ruleta de Palabras R", "Juego", "Gira la ruleta y graba la palabra indicada.", "Medio", "Práctica lúdica de pronunciación."));
         listaDefinida.add(new Ejercicio("14", "Sílabas RA-RU", "Relación", "Coloca la imagen frente a su sílaba inicial.", "Bajo", "Asociación de sílabas con sonidos iniciales."));
         listaDefinida.add(new Ejercicio("15", "R Fuerte vs R Ligera", "Clasificación", "Clasifica imágenes según el sonido de su R.", "Alto", "Diferenciación entre R fuerte y R suave."));
+        listaDefinida.add(new Ejercicio("16", "Video Fonema R", "Video", "Observa el video sobre el fonema R.", "Bajo", "Reconocimiento visual y auditivo del fonema R."));
 
         db.collection("ejercicios").get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
