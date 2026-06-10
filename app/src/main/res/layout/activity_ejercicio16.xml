@@ -34,6 +34,7 @@
     </LinearLayout>
 
     <ScrollView
+        android:id="@+id/scrollViewEje16"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
@@ -42,7 +43,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="15dp">
+            android:paddingTop="15dp"
+            android:paddingBottom="15dp">
 
             <!-- Caja de Instrucciones -->
             <com.google.android.material.card.MaterialCardView
@@ -52,6 +54,8 @@
                 app:strokeColor="#38A9F5"
                 app:strokeWidth="2dp"
                 app:cardBackgroundColor="#38A9F5"
+                android:layout_marginStart="15dp"
+                android:layout_marginEnd="15dp"
                 android:layout_marginBottom="15dp">
 
                 <LinearLayout
@@ -97,7 +101,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="1. Observa el video del modelo.\n2. Presiona el botón 'Grabar Video' para replicar el ejercicio."
+                        android:text="• Mira cómo se pronuncia el sonido R.\n• Atiende al movimiento de boca y lengua.\n• Mira el video las veces que necesites.\n• ¡Grábate practicando!"
                         android:textSize="18sp"
                         android:textColor="@color/white"
                         android:lineSpacingExtra="4dp"
@@ -106,54 +110,120 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Contenedor del Video -->
-            <FrameLayout
-                android:id="@+id/videoContainer"
-                android:layout_width="match_parent"
-                android:layout_height="350dp"
-                android:background="#000000">
+            <!-- Nueva Vista de Cámara del Usuario (Ahora con tamaño 200x200) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardUserCamera"
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="15dp"
+                android:visibility="gone"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="8dp"
+                app:strokeColor="#38A9F5"
+                app:strokeWidth="3dp">
 
-                <TextureView
-                    android:id="@+id/textureViewEjercicio16"
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_gravity="center" />
+                    android:layout_height="match_parent">
 
-                <!-- Imagen de previsualización -->
-                <ImageView
-                    android:id="@+id/ivVideoPreviewEje16"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    android:visibility="visible" />
-            </FrameLayout>
+                    <androidx.camera.view.PreviewView
+                        android:id="@+id/previewViewCameraUser"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
 
-            <!-- Controles del Video -->
+                    <!-- Vista para reproducir el video grabado -->
+                    <TextureView
+                        android:id="@+id/textureViewUserPlayback"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/tvRecordingStatusUser"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|center_horizontal"
+                        android:layout_marginTop="10dp"
+                        android:background="#80000000"
+                        android:padding="8dp"
+                        android:text="Grabando..."
+                        android:textColor="#FF0000"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Contenedor del Video de Guía (Ahora con tamaño 260x320) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardVideoContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                android:layout_marginBottom="20dp"
+                app:cardBackgroundColor="#FFFFFF">
+
+                <FrameLayout
+                    android:id="@+id/videoContainer"
+                    android:layout_width="260dp"
+                    android:layout_height="300dp"
+                    android:background="#FFFFFF">
+
+                    <TextureView
+                        android:id="@+id/textureViewEjercicio16"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="center" />
+
+                    <ImageView
+                        android:id="@+id/ivVideoPreviewEje16"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:layout_gravity="center"
+                        android:visibility="visible" />
+
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Controles del Video de Guía -->
             <LinearLayout
+                android:id="@+id/layoutControlesGuia"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center"
-                android:layout_marginTop="10dp">
+                android:layout_marginStart="15dp"
+                android:layout_marginEnd="15dp"
+                android:layout_marginTop="5dp">
 
                 <Button
                     android:id="@+id/btnPlayVideoEje16"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="Reproducir"
-                    android:layout_marginEnd="10dp"
+                    android:layout_marginEnd="8dp"
                     android:backgroundTint="#4CAF50"
                     android:textColor="#FFFFFF"
-                    app:icon="@android:drawable/ic_media_play" />
+                    app:icon="@android:drawable/ic_media_play"
+                    app:cornerRadius="8dp" />
 
                 <Button
                     android:id="@+id/btnPauseVideoEje16"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="Pausa"
                     android:backgroundTint="#F44336"
                     android:textColor="#FFFFFF"
-                    app:icon="@android:drawable/ic_media_pause" />
+                    app:icon="@android:drawable/ic_media_pause"
+                    app:cornerRadius="8dp" />
 
             </LinearLayout>
 
@@ -170,13 +240,51 @@
         <Button
             android:id="@+id/btnGrabarVideoEje16"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Grabar Video"
+            android:layout_height="60dp"
+            android:text="Ya lo vi, ahora lo intento"
             android:textSize="18sp"
             android:textStyle="bold"
             android:backgroundTint="#38A9F5"
             android:textColor="#FFFFFF"
-            app:cornerRadius="12dp"/>
+            app:cornerRadius="15dp"/>
+
+        <Button
+            android:id="@+id/btnComenzarGrabacion"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Empieza grabación"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:backgroundTint="#4CAF50"
+            android:textColor="#FFFFFF"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp"
+            app:cornerRadius="15dp"/>
+
+        <Button
+            android:id="@+id/btnDetenerGrabacion"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Finalizar"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:backgroundTint="#F44336"
+            android:textColor="#FFFFFF"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp"
+            app:cornerRadius="15dp"/>
+
+        <Button
+            android:id="@+id/btnSubirVideo"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Subir"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:backgroundTint="#FFA726"
+            android:textColor="#FFFFFF"
+            android:visibility="gone"
+            app:cornerRadius="15dp"/>
     </LinearLayout>
 
 </LinearLayout>

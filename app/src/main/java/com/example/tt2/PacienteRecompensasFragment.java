@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.tt2.rewards.Reward1;
+import com.example.tt2.rewards.Reward2;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -123,11 +124,16 @@ public class PacienteRecompensasFragment extends Fragment {
             // Configurar icono según el ID
             if ("Reward1".equals(reward.rewardId)) {
                 holder.ivIcono.setImageResource(R.drawable.user);
+            } else if ("Reward2".equals(reward.rewardId)) {
+                holder.ivIcono.setImageResource(R.drawable.user);
             }
 
             holder.btnAbrir.setOnClickListener(v -> {
                 if ("Reward1".equals(reward.rewardId)) {
                     Intent intent = new Intent(getContext(), Reward1.class);
+                    startActivity(intent);
+                } else if ("Reward2".equals(reward.rewardId)) {
+                    Intent intent = new Intent(getContext(), Reward2.class);
                     startActivity(intent);
                 } else {
                     Toast.makeText(getContext(), "Esta recompensa no está disponible", Toast.LENGTH_SHORT).show();

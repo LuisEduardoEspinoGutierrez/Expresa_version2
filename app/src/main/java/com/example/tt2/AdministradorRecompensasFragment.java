@@ -31,7 +31,7 @@ public class AdministradorRecompensasFragment extends Fragment {
 
     private static final String TAG = "AdminRecompensas";
     private FirebaseFirestore db;
-    private MaterialButton btnAsignarReward1;
+    private MaterialButton btnAsignarReward1, btnAsignarReward2;
     
     private RecyclerView rvAsignaciones;
     private AsignacionesRewardsAdapter adapter;
@@ -61,6 +61,7 @@ public class AdministradorRecompensasFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         btnAsignarReward1 = view.findViewById(R.id.btnAsignarReward1);
+        btnAsignarReward2 = view.findViewById(R.id.btnAsignarReward2);
         rvAsignaciones = view.findViewById(R.id.rvAsignacionesRecompensas);
 
         if (rvAsignaciones != null) {
@@ -71,7 +72,13 @@ public class AdministradorRecompensasFragment extends Fragment {
             cargarAsignacionesRewards();
         }
 
-        btnAsignarReward1.setOnClickListener(v -> mostrarDialogoTerapeutas("Reward1", "Recompensa 1"));
+        if (btnAsignarReward1 != null) {
+            btnAsignarReward1.setOnClickListener(v -> mostrarDialogoTerapeutas("Reward1", "Recompensa 1"));
+        }
+        
+        if (btnAsignarReward2 != null) {
+            btnAsignarReward2.setOnClickListener(v -> mostrarDialogoTerapeutas("Reward2", "Recompensa 2"));
+        }
     }
 
     private void cargarAsignacionesRewards() {

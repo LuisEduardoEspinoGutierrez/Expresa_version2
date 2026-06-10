@@ -4,6 +4,7 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
@@ -22,6 +23,7 @@ public class Reward2 extends AppCompatActivity implements View.OnClickListener {
             ivRew2C1, ivRew2C2, ivRew2C3, ivRew2C4,
             ivRew2Rp1, ivRew2Rp2,
             ivReward2;
+    LinearLayout btnRegresarBarraRew2;
     MaterialCardView cardReward2;
     boolean EscLocked1 = false, EscLocked2 = false, RpLocked1 = false, RpLocked2 = false, CLocked1 = false, CLocked2 = false, CLocked3 = false, CLocked4 = false;
     MediaPlayer mp;
@@ -65,6 +67,7 @@ public class Reward2 extends AppCompatActivity implements View.OnClickListener {
         ivRew2Rp1 = findViewById(R.id.ivRew2Rp1);
         ivRew2Rp2 = findViewById(R.id.ivRew2Rp2);
         ivRegresarRew2 = findViewById(R.id.ivRegresarRew2);
+        btnRegresarBarraRew2 = findViewById(R.id.btnRegresarBarraRew2);
 
         ivRew2Esc1.setOnClickListener(this);
         ivRew2Esc2.setOnClickListener(this);
@@ -74,6 +77,11 @@ public class Reward2 extends AppCompatActivity implements View.OnClickListener {
         ivRew2C4.setOnClickListener(this);
         ivRew2Rp1.setOnClickListener(this);
         ivRew2Rp2.setOnClickListener(this);
+        if (btnRegresarBarraRew2 != null) {
+            btnRegresarBarraRew2.setOnClickListener(this);
+        } else {
+            ivRegresarRew2.setOnClickListener(this);
+        }
     }
 
     private void reproducirAudios(int... audios) {
@@ -146,7 +154,7 @@ public class Reward2 extends AppCompatActivity implements View.OnClickListener {
 
     @Override
     public void onClick(View v) {
-        if (v.getId() == R.id.ivRegresarRew1) {
+        if (v.getId() == R.id.btnRegresarBarraRew2 || v.getId() == R.id.ivRegresarRew2) {
             finish();
         }
         else if (v.getId() == R.id.ivRew2Esc1) {
