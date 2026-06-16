@@ -8,9 +8,10 @@
     tools:context=".TerapeutaCloudFragment">
 
     <TextView
+        android:id="@+id/tvCloudTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Audios de Mis Pacientes"
+        android:text="Nube de Mis Pacientes"
         android:textSize="22sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp" />

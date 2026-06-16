@@ -5,7 +5,9 @@ import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.pm.PackageManager;
 import android.content.res.AssetFileDescriptor;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -18,10 +20,10 @@ import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -61,9 +63,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Ejercicio16 extends AppCompatActivity {
+public class Ejercicio17_4 extends AppCompatActivity {
 
-    private static final String TAG = "Ejercicio16";
+    private static final String TAG = "Ejercicio17_4";
     private static final int REQUEST_CODE_PERMISSIONS = 10;
     private static final String[] REQUIRED_PERMISSIONS = {
             Manifest.permission.CAMERA,
@@ -77,8 +79,8 @@ public class Ejercicio16 extends AppCompatActivity {
     private String videoPath;
     private View videoContainer;
     private View cardVideoContainer;
-    private int mVideoRotation = 0;
     private ScrollView scrollView;
+    private boolean isOrro2 = false; 
 
     // CameraX variables
     private PreviewView previewViewCamera;
@@ -86,13 +88,29 @@ public class Ejercicio16 extends AppCompatActivity {
     private Recording recording;
     private ExecutorService cameraExecutor;
     private View cardCameraOverlay;
-    private Button btnIntento; // El de "Ya lo vi..."
+    private Button btnIntento;
     private Button btnComenzar;
     private Button btnDetener;
     private Button btnSubir;
     private Button btnGrabarDeNuevo;
     private View layoutPostGrabacion;
     private View tvStatus;
+
+    // Dynamic Text variables
+    private TextView tvDinamico;
+    private int currentTextIndex = 0;
+    private final String[] dynamicTexts = {"orro", "orro", "Ahora di Morro"};
+    private final Handler dynamicTextHandler = new Handler(Looper.getMainLooper());
+    private final Runnable dynamicTextRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (tvDinamico != null && tvDinamico.getVisibility() == View.VISIBLE) {
+                currentTextIndex = (currentTextIndex + 1) % dynamicTexts.length;
+                tvDinamico.setText(dynamicTexts[currentTextIndex]);
+                dynamicTextHandler.postDelayed(this, 5000);
+            }
+        }
+    };
 
     // Timer for automatic stop
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -101,7 +119,7 @@ public class Ejercicio16 extends AppCompatActivity {
         public void run() {
             if (recording != null) {
                 stopRecording();
-                Toast.makeText(Ejercicio16.this, "Límite de 30 segundos alcanzado", Toast.LENGTH_SHORT).show();
+                Toast.makeText(Ejercicio17_4.this, "Límite de 30 segundos alcanzado", Toast.LENGTH_SHORT).show();
             }
         }
     };
@@ -120,7 +138,7 @@ public class Ejercicio16 extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_ejercicio16);
+        setContentView(R.layout.activity_ejercicio17_4);
 
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
@@ -131,6 +149,8 @@ public class Ejercicio16 extends AppCompatActivity {
         setupVideoGuide();
         
         cameraExecutor = Executors.newSingleThreadExecutor();
+        
+        checkExerciseStatus();
     }
 
     private void setupWindowInsets() {
@@ -145,28 +165,30 @@ public class Ejercicio16 extends AppCompatActivity {
     }
 
     private void initializeViews() {
-        ImageView ivRegresar = findViewById(R.id.ivRegresarEje16);
-        ivPreview    = findViewById(R.id.ivVideoPreviewEje16);
-        textureView  = findViewById(R.id.textureViewEjercicio16);
-        videoContainer = findViewById(R.id.videoContainer);
-        cardVideoContainer = findViewById(R.id.cardVideoContainer);
-        scrollView = findViewById(R.id.scrollViewEje16);
-        Button btnAudio = findViewById(R.id.btnAudioInstruccionesEje16);
+        ImageView ivRegresar = findViewById(R.id.ivRegresarEje17_4);
+        ivPreview    = findViewById(R.id.ivVideoPreviewEje17_4);
+        textureView  = findViewById(R.id.textureViewEjercicio17_4);
+        videoContainer = findViewById(R.id.videoContainer17_4);
+        cardVideoContainer = findViewById(R.id.cardVideoContainer17_4);
+        scrollView = findViewById(R.id.scrollViewEje17_4);
+        Button btnAudio = findViewById(R.id.btnAudioInstruccionesEje17_4);
         
-        btnIntento = findViewById(R.id.btnGrabarVideoEje16);
-        btnComenzar = findViewById(R.id.btnComenzarGrabacion);
-        btnDetener = findViewById(R.id.btnDetenerGrabacion);
-        btnSubir = findViewById(R.id.btnSubirVideo);
-        btnGrabarDeNuevo = findViewById(R.id.btnGrabarDeNuevo);
-        layoutPostGrabacion = findViewById(R.id.layoutPostGrabacion);
+        btnIntento = findViewById(R.id.btnGrabarVideoEje17_4);
+        btnComenzar = findViewById(R.id.btnComenzarGrabacion17_4);
+        btnDetener = findViewById(R.id.btnDetenerGrabacion17_4);
+        btnSubir = findViewById(R.id.btnSubirVideo17_4);
+        btnGrabarDeNuevo = findViewById(R.id.btnGrabarDeNuevo17_4);
+        layoutPostGrabacion = findViewById(R.id.layoutPostGrabacion17_4);
         
-        previewViewCamera = findViewById(R.id.previewViewCameraUser);
-        cardCameraOverlay = findViewById(R.id.cardUserCamera);
-        textureViewReproduccion = findViewById(R.id.textureViewUserPlayback);
-        tvStatus = findViewById(R.id.tvRecordingStatusUser);
+        previewViewCamera = findViewById(R.id.previewViewCameraUser17_4);
+        cardCameraOverlay = findViewById(R.id.cardUserCamera17_4);
+        textureViewReproduccion = findViewById(R.id.textureViewUserPlayback17_4);
+        tvStatus = findViewById(R.id.tvRecordingStatusUser17_4);
+        tvDinamico = findViewById(R.id.tvDinamico17_4);
         
-        Button btnPlay = findViewById(R.id.btnPlayVideoEje16);
-        Button btnPause = findViewById(R.id.btnPauseVideoEje16);
+        Button btnPlay = findViewById(R.id.btnPlayVideoEje17_4);
+        Button btnPause = findViewById(R.id.btnPauseVideoEje17_4);
+        ImageView btnCambiar = findViewById(R.id.btnCambiarVideo17_4);
 
         if (ivRegresar != null) ivRegresar.setOnClickListener(v -> finish());
 
@@ -179,6 +201,7 @@ public class Ejercicio16 extends AppCompatActivity {
                 stopInstructions();
                 if (allPermissionsGranted()) {
                     startCameraPreview();
+                    startDynamicText();
                 } else {
                     ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
                 }
@@ -217,6 +240,49 @@ public class Ejercicio16 extends AppCompatActivity {
                 if (mediaPlayer != null && mediaPlayer.isPlaying()) mediaPlayer.pause();
             });
         }
+
+        if (btnCambiar != null) {
+            btnCambiar.setOnClickListener(v -> switchVideo());
+        }
+    }
+
+    private void startDynamicText() {
+        if (tvDinamico != null) {
+            tvDinamico.setVisibility(View.VISIBLE);
+            currentTextIndex = 0;
+            tvDinamico.setText(dynamicTexts[currentTextIndex]);
+            dynamicTextHandler.removeCallbacks(dynamicTextRunnable);
+            dynamicTextHandler.postDelayed(dynamicTextRunnable, 2000);
+        }
+    }
+
+    private void stopDynamicText() {
+        if (tvDinamico != null) {
+            tvDinamico.setVisibility(View.GONE);
+        }
+        dynamicTextHandler.removeCallbacks(dynamicTextRunnable);
+    }
+
+    private void switchVideo() {
+        isOrro2 = !isOrro2;
+        videoPath = "android.resource://" + getPackageName() + "/" + (isOrro2 ? R.raw.orro_2 : R.raw.orro);
+        
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
+        
+        if (ivPreview != null) {
+            ivPreview.setVisibility(View.VISIBLE);
+            setInitialPreviewAndSize();
+        }
+        
+        if (textureView != null && textureView.isAvailable()) {
+            setupMediaPlayer(new Surface(textureView.getSurfaceTexture()));
+        }
+        
+        Toast.makeText(this, "Cambiando a video " + (isOrro2 ? "2" : "1"), Toast.LENGTH_SHORT).show();
     }
 
     private void resetForNewRecording() {
@@ -255,7 +321,7 @@ public class Ejercicio16 extends AppCompatActivity {
     }
 
     private void setupVideoGuide() {
-        videoPath = "android.resource://" + getPackageName() + "/" + R.raw.r_sonido;
+        videoPath = "android.resource://" + getPackageName() + "/" + R.raw.orro;
         if (ivPreview != null) {
             ivPreview.setVisibility(View.VISIBLE);
             ivPreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -269,18 +335,15 @@ public class Ejercicio16 extends AppCompatActivity {
                 public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
                     setupMediaPlayer(new Surface(surfaceTexture));
                 }
-                @Override
-                public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {}
-                @Override
-                public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
+                @Override public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {}
+                @Override public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
                     if (mediaPlayer != null) {
                         mediaPlayer.release();
                         mediaPlayer = null;
                     }
                     return true;
                 }
-                @Override
-                public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {}
+                @Override public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {}
             });
         }
     }
@@ -302,12 +365,10 @@ public class Ejercicio16 extends AppCompatActivity {
         if (btnDetener != null) btnDetener.setVisibility(View.GONE);
         if (layoutPostGrabacion != null) layoutPostGrabacion.setVisibility(View.GONE);
 
-        // Desplazar hacia abajo para ver cámara y video automáticamente
         if (scrollView != null) {
             scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
         }
 
-        // Asegurarse de que el video de guía continúe o se inicie
         if (mediaPlayer != null) {
             mediaPlayer.start();
         }
@@ -354,7 +415,7 @@ public class Ejercicio16 extends AppCompatActivity {
         }
 
         long timeStamp = System.currentTimeMillis();
-        String name = "Ejercicio16_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(timeStamp);
+        String name = "Ejercicio17_4_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(timeStamp);
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
         contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
@@ -372,22 +433,14 @@ public class Ejercicio16 extends AppCompatActivity {
                     if (recordEvent instanceof VideoRecordEvent.Start) {
                         if (btnDetener != null) btnDetener.setEnabled(true);
                         if (tvStatus != null) tvStatus.setVisibility(View.VISIBLE);
-                        
-                        // Start 30s timeout for automatic stop
                         mainHandler.postDelayed(stopRecordingRunnable, 30000);
-                        
                     } else if (recordEvent instanceof VideoRecordEvent.Finalize) {
                         VideoRecordEvent.Finalize finalizeEvent = (VideoRecordEvent.Finalize) recordEvent;
-                        
-                        // Cancel any pending automatic stop timer
                         mainHandler.removeCallbacks(stopRecordingRunnable);
-                        
                         if (!finalizeEvent.hasError()) {
                             lastSavedUri = finalizeEvent.getOutputResults().getOutputUri();
                             Toast.makeText(getBaseContext(), "Grabación finalizada.", Toast.LENGTH_SHORT).show();
-                            
                             showRecordedVideo(lastSavedUri);
-                            
                             if (btnDetener != null) btnDetener.setVisibility(View.GONE);
                             if (layoutPostGrabacion != null) layoutPostGrabacion.setVisibility(View.VISIBLE);
                         } else {
@@ -412,8 +465,7 @@ public class Ejercicio16 extends AppCompatActivity {
                 setupUserMediaPlayer(new Surface(textureViewReproduccion.getSurfaceTexture()), videoUri);
             } else {
                 textureViewReproduccion.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-                    @Override
-                    public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
+                    @Override public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
                         setupUserMediaPlayer(new Surface(surfaceTexture), videoUri);
                     }
                     @Override public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {}
@@ -447,12 +499,11 @@ public class Ejercicio16 extends AppCompatActivity {
     }
 
     private void stopRecording() {
-        mainHandler.removeCallbacks(stopRecordingRunnable); // Cancel timer if stopped manually
+        mainHandler.removeCallbacks(stopRecordingRunnable);
         if (recording != null) {
             recording.stop();
             recording = null;
         }
-        // Pausar el video de guía al finalizar la grabación para que el paciente vea su propio video
         if (mediaPlayer != null && mediaPlayer.isPlaying()) {
             mediaPlayer.pause();
         }
@@ -463,23 +514,18 @@ public class Ejercicio16 extends AppCompatActivity {
             Toast.makeText(this, "Usuario no autenticado", Toast.LENGTH_SHORT).show();
             return;
         }
-        
         btnSubir.setEnabled(false);
         Toast.makeText(this, "Subiendo video...", Toast.LENGTH_SHORT).show();
-
         String userId = mAuth.getCurrentUser().getUid();
         long timestamp = System.currentTimeMillis();
-        // Formato: usuarioID_eje16_video_fecha
-        String fileName = userId + "_eje16_video_" + timestamp + ".mp4";
-        // Ruta: videos/16/fileName
-        StorageReference storageRef = storage.getReference().child("videos/ejercicio16/" + fileName);
-
+        String fileName = userId + "_eje17.4_video_" + timestamp + ".mp4";
+        StorageReference storageRef = storage.getReference().child("videos/ejercicio17.4/" + fileName);
         storageRef.putFile(videoUri)
                 .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl()
                         .addOnSuccessListener(this::saveToFirestore))
                 .addOnFailureListener(e -> {
                     btnSubir.setEnabled(true);
-                    Toast.makeText(Ejercicio16.this, "Error al subir video: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(Ejercicio17_4.this, "Error al subir video: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
@@ -488,23 +534,85 @@ public class Ejercicio16 extends AppCompatActivity {
         String userId = mAuth.getCurrentUser().getUid();
         Map<String, Object> data = new HashMap<>();
         data.put("idPaciente", userId);
-        data.put("logicalId", "16");
+        data.put("logicalId", "17.4");
         data.put("videoUrl", downloadUri.toString());
         data.put("timestamp", Timestamp.now());
         data.put("completado", true);
         data.put("porcentaje", 100);
 
         db.collection("progreso_ejercicios")
-                .document(userId + "_16")
+                .document(userId + "_17.4")
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(Ejercicio16.this, "¡Ejercicio guardado con éxito!", Toast.LENGTH_LONG).show();
-                    finish();
+                    Toast.makeText(Ejercicio17_4.this, "¡Ejercicio guardado con éxito!", Toast.LENGTH_LONG).show();
+                    showCompletedState();
                 })
                 .addOnFailureListener(e -> {
                     btnSubir.setEnabled(true);
-                    Toast.makeText(Ejercicio16.this, "Error al guardar en BD: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(Ejercicio17_4.this, "Error al guardar en BD: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
+    }
+
+    private void checkExerciseStatus() {
+        if (mAuth.getCurrentUser() == null) return;
+        String userId = mAuth.getCurrentUser().getUid();
+        db.collection("progreso_ejercicios")
+                .document(userId + "_17.4")
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Boolean completado = documentSnapshot.getBoolean("completado");
+                        if (completado != null && completado) {
+                            showCompletedState();
+                        }
+                    }
+                });
+    }
+
+    private void showCompletedState() {
+        runOnUiThread(() -> {
+            // Ocultar texto dinámico si estaba visible
+            stopDynamicText();
+
+            // Ocultar todo lo relacionado con la grabación/reproducción del usuario
+            if (cardCameraOverlay != null) cardCameraOverlay.setVisibility(View.GONE);
+            if (textureViewReproduccion != null) textureViewReproduccion.setVisibility(View.GONE);
+            
+            if (mediaPlayerUser != null) {
+                try {
+                    mediaPlayerUser.stop();
+                    mediaPlayerUser.release();
+                } catch (Exception ignored) {}
+                mediaPlayerUser = null;
+            }
+
+            // Resetear video guía a su estado inicial (con el preview visible)
+            if (mediaPlayer != null) {
+                try {
+                    if (mediaPlayer.isPlaying()) mediaPlayer.pause();
+                    mediaPlayer.seekTo(1);
+                } catch (Exception ignored) {}
+            }
+            if (ivPreview != null) ivPreview.setVisibility(View.VISIBLE);
+
+            // Ocultar botones de acción de grabación
+            if (layoutPostGrabacion != null) layoutPostGrabacion.setVisibility(View.GONE);
+            if (btnComenzar != null) btnComenzar.setVisibility(View.GONE);
+            if (btnDetener != null) btnDetener.setVisibility(View.GONE);
+            
+            // Mostrar botón principal deshabilitado
+            if (btnIntento != null) {
+                btnIntento.setVisibility(View.VISIBLE);
+                btnIntento.setText("Ejercicio 100% Completado");
+                btnIntento.setEnabled(false);
+                btnIntento.setBackgroundTintList(ColorStateList.valueOf(Color.GRAY));
+            }
+
+            // Asegurar que el scroll suba para ver las instrucciones y video guía
+            if (scrollView != null) {
+                scrollView.post(() -> scrollView.fullScroll(View.FOCUS_UP));
+            }
+        });
     }
 
     @Override
@@ -513,6 +621,7 @@ public class Ejercicio16 extends AppCompatActivity {
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
                 startCameraPreview();
+                startDynamicText();
             } else {
                 Toast.makeText(this, "Permisos no concedidos.", Toast.LENGTH_SHORT).show();
             }
@@ -523,12 +632,11 @@ public class Ejercicio16 extends AppCompatActivity {
         new Thread(() -> {
             MediaMetadataRetriever retriever = new MediaMetadataRetriever();
             try {
-                AssetFileDescriptor afd = getResources().openRawResourceFd(R.raw.r_sonido);
+                int resId = isOrro2 ? R.raw.orro_2 : R.raw.orro;
+                AssetFileDescriptor afd = getResources().openRawResourceFd(resId);
                 retriever.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
                 afd.close();
-
                 Bitmap bitmap = retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
-
                 if (bitmap != null) {
                     runOnUiThread(() -> {
                         if (ivPreview != null) ivPreview.setImageBitmap(bitmap);
@@ -548,7 +656,6 @@ public class Ejercicio16 extends AppCompatActivity {
             mediaPlayer.setDataSource(this, Uri.parse(videoPath));
             mediaPlayer.setSurface(surface);
             mediaPlayer.setLooping(true);
-
             mediaPlayer.setOnInfoListener((mp, what, extra) -> {
                 if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
                     if (ivPreview != null) ivPreview.setVisibility(View.GONE);
@@ -556,13 +663,11 @@ public class Ejercicio16 extends AppCompatActivity {
                 }
                 return false;
             });
-
             mediaPlayer.prepareAsync();
             mediaPlayer.setOnPreparedListener(mp -> {
                 mp.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING);
                 mp.seekTo(1);
             });
-
         } catch (Exception e) {
             Log.e(TAG, "Error setting up MediaPlayer", e);
         }
@@ -572,6 +677,7 @@ public class Ejercicio16 extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         stopInstructions();
+        stopDynamicText();
         if (recording != null) {
             stopRecording();
         }
@@ -581,6 +687,7 @@ public class Ejercicio16 extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         stopInstructions();
+        stopDynamicText();
         mainHandler.removeCallbacks(stopRecordingRunnable);
         if (mediaPlayer != null) {
             mediaPlayer.release();

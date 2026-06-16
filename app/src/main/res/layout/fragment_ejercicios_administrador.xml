@@ -48,23 +48,11 @@
 
         <Button
             android:id="@+id/btnCargarFirestore"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="Sincronizar"
             android:backgroundTint="#FF9800"
-            android:textColor="@android:color/white"
-            android:layout_marginEnd="4dp" />
-
-        <Button
-            android:id="@+id/btnIrEjercicio16"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Ver Ejercicio 16"
-            android:backgroundTint="#38A9F5"
-            android:textColor="@android:color/white"
-            android:layout_marginStart="4dp" />
+            android:textColor="@android:color/white" />
 
     </LinearLayout>
 

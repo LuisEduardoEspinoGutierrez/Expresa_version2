@@ -1,15 +1,7 @@
 package com.example.tt2;
 
 import android.app.AlertDialog;
-import android.content.Intent;
 import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,9 +10,16 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.tt2.ejercicios.Ejercicio16;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.tt2.ejercicios.*;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,24 +30,14 @@ import java.util.Map;
 public class AdministradorEjerciciosFragment extends Fragment {
 
     private FirebaseFirestore db;
-    
-    // Panel de Asignaciones Hechas (Panel superior para desasignar)
     private RecyclerView rvAsignaciones;
     private AsignacionesAdapter asignacionesAdapter;
     private List<AsignacionAdmin> listaAsignaciones;
-
-    // Panel de Catálogo de Ejercicios para Asignar (Abajo - Las "Cajitas")
     private RecyclerView rvCatalogo;
     private CatalogoAdapter catalogoAdapter;
     private List<Ejercicio> listaCatalogo;
 
-    public AdministradorEjerciciosFragment() {
-        // Required empty public constructor
-    }
-
-    public static AdministradorEjerciciosFragment newInstance() {
-        return new AdministradorEjerciciosFragment();
-    }
+    public AdministradorEjerciciosFragment() {}
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -57,8 +46,7 @@ public class AdministradorEjerciciosFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_ejercicios_administrador, container, false);
     }
 
@@ -66,289 +54,153 @@ public class AdministradorEjerciciosFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // 1. Configurar RecyclerView de Asignaciones (Arriba)
         rvAsignaciones = view.findViewById(R.id.rvAsignacionesAdmin);
-        if (rvAsignaciones != null) {
-            rvAsignaciones.setLayoutManager(new LinearLayoutManager(getContext()));
-            listaAsignaciones = new ArrayList<>();
-            asignacionesAdapter = new AsignacionesAdapter(listaAsignaciones);
-            rvAsignaciones.setAdapter(asignacionesAdapter);
-            cargarAsignaciones();
-        }
+        rvAsignaciones.setLayoutManager(new LinearLayoutManager(getContext()));
+        listaAsignaciones = new ArrayList<>();
+        asignacionesAdapter = new AsignacionesAdapter(listaAsignaciones);
+        rvAsignaciones.setAdapter(asignacionesAdapter);
 
-        // 2. Configurar RecyclerView de Catálogo (Abajo, las "cajitas" para asignar)
         rvCatalogo = view.findViewById(R.id.rvCatalogoEjercicios);
-        if (rvCatalogo != null) {
-            rvCatalogo.setLayoutManager(new LinearLayoutManager(getContext()));
-            listaCatalogo = new ArrayList<>();
-            catalogoAdapter = new CatalogoAdapter(listaCatalogo);
-            rvCatalogo.setAdapter(catalogoAdapter);
-            cargarCatalogo();
-        }
+        rvCatalogo.setLayoutManager(new LinearLayoutManager(getContext()));
+        listaCatalogo = new ArrayList<>();
+        catalogoAdapter = new CatalogoAdapter(listaCatalogo);
+        rvCatalogo.setAdapter(catalogoAdapter);
 
-        Button btnCargarFirestore = view.findViewById(R.id.btnCargarFirestore);
-        if (btnCargarFirestore != null) {
-            btnCargarFirestore.setOnClickListener(v -> sincronizarEjercicios());
-        }
+        view.findViewById(R.id.btnCargarFirestore).setOnClickListener(v -> sincronizarEjercicios());
 
-        Button btnIrEjercicio16 = view.findViewById(R.id.btnIrEjercicio16);
-        if (btnIrEjercicio16 != null) {
-            btnIrEjercicio16.setOnClickListener(v -> {
-                Intent intent = new Intent(getActivity(), Ejercicio16.class);
-                startActivity(intent);
-            });
-        }
+        cargarAsignaciones();
+        cargarCatalogo();
     }
 
     private void cargarAsignaciones() {
-        // Consultamos sin orderBy para evitar errores de índices manuales en Firebase
-        db.collection("ejercicios_asignados")
-                .addSnapshotListener((value, error) -> {
-                    if (error != null) return;
-                    listaAsignaciones.clear();
-                    if (value != null) {
-                        for (QueryDocumentSnapshot doc : value) {
-                            AsignacionAdmin asig = doc.toObject(AsignacionAdmin.class);
-                            asig.documentId = doc.getId(); 
-                            listaAsignaciones.add(asig);
-                        }
-                        // Ordenar localmente por fecha (más recientes primero)
-                        Collections.sort(listaAsignaciones, (a, b) -> Long.compare(b.fechaAsignacion, a.fechaAsignacion));
-                    }
-                    asignacionesAdapter.notifyDataSetChanged();
-                });
+        db.collection("ejercicios_asignados").addSnapshotListener((value, error) -> {
+            if (error != null || value == null) return;
+            listaAsignaciones.clear();
+            for (QueryDocumentSnapshot doc : value) {
+                AsignacionAdmin asig = doc.toObject(AsignacionAdmin.class);
+                asig.documentId = doc.getId();
+                listaAsignaciones.add(asig);
+            }
+            Collections.sort(listaAsignaciones, (a, b) -> Long.compare(b.fechaAsignacion, a.fechaAsignacion));
+            asignacionesAdapter.notifyDataSetChanged();
+        });
     }
 
     private void cargarCatalogo() {
-        // Consultamos sin orderBy para evitar errores de índices manuales en Firebase
-        db.collection("ejercicios")
-                .addSnapshotListener((value, error) -> {
-                    if (error != null) return;
-                    listaCatalogo.clear();
-                    if (value != null) {
-                        for (QueryDocumentSnapshot doc : value) {
-                            Ejercicio eje = doc.toObject(Ejercicio.class);
-                            listaCatalogo.add(eje);
-                        }
-                        // ORDENAMIENTO NUMÉRICO LOCAL
-                        Collections.sort(listaCatalogo, (e1, e2) -> compareEjercicioNumbers(e1.getNumeroEjercicio(), e2.getNumeroEjercicio()));
-                    }
-                    catalogoAdapter.notifyDataSetChanged();
-                });
+        db.collection("ejercicios").addSnapshotListener((value, error) -> {
+            if (error != null || value == null) return;
+            listaCatalogo.clear();
+            for (QueryDocumentSnapshot doc : value) {
+                Ejercicio eje = doc.toObject(Ejercicio.class);
+                if (eje.getNombre() != null && eje.getNumeroEjercicio() != null) {
+                    listaCatalogo.add(eje);
+                }
+            }
+            Collections.sort(listaCatalogo, (e1, e2) -> compareEjercicioNumbers(e1.getNumeroEjercicio(), e2.getNumeroEjercicio()));
+            catalogoAdapter.notifyDataSetChanged();
+        });
     }
 
-    /**
-     * Compara dos números de ejercicio en formato String (ej: "1", "6.1", "10") de forma numérica.
-     */
     private int compareEjercicioNumbers(String n1, String n2) {
-        if (n1 == null || n2 == null) return 0;
         try {
-            String[] parts1 = n1.split("\\.");
-            String[] parts2 = n2.split("\\.");
-            int length = Math.max(parts1.length, parts2.length);
-            for (int i = 0; i < length; i++) {
-                int v1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
-                int v2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
-                if (v1 < v2) return -1;
-                if (v1 > v2) return 1;
+            String[] p1 = n1.split("\\.");
+            String[] p2 = n2.split("\\.");
+            int max = Math.max(p1.length, p2.length);
+            for (int i = 0; i < max; i++) {
+                int v1 = i < p1.length ? Integer.parseInt(p1[i]) : 0;
+                int v2 = i < p2.length ? Integer.parseInt(p2[i]) : 0;
+                if (v1 != v2) return Integer.compare(v1, v2);
             }
-        } catch (NumberFormatException e) {
-            return n1.compareTo(n2); // Fallback alfabético si falla
-        }
+        } catch (Exception e) { return n1.compareTo(n2); }
         return 0;
     }
 
-    private void mostrarDialogoTerapeutas(String logicalId, String nombreEje) {
-        db.collection("usuarios")
-                .whereEqualTo("tipoUsuario", "Terapeuta")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<String> nombresTerapeutas = new ArrayList<>();
-                    List<String> idsTerapeutas = new ArrayList<>();
+    private void sincronizarEjercicios() {
+        List<Ejercicio> listaDefinida = new ArrayList<>();
+        listaDefinida.add(new Ejercicio("1", "Pronunciación Inicial R", "Pronunciación", "Identifica imágenes que comienzan con R.", "Bajo", "Articulación inicial."));
+        listaDefinida.add(new Ejercicio("2", "Arrastra la R", "Visual", "Arrastra imágenes con R al centro.", "Bajo", "Conciencia fonológica."));
+        listaDefinida.add(new Ejercicio("3", "Lectura: El Tesoro de Teresa", "Lectura", "Lee en voz alta sobre Teresa.", "Medio", "Fluidez R suave."));
+        listaDefinida.add(new Ejercicio("4", "Lectura: Raúl y el Ferrocarril", "Lectura", "Lee en voz alta sobre Raúl.", "Medio", "Práctica R fuerte."));
+        listaDefinida.add(new Ejercicio("5", "Lectura: Curro y Tarro", "Lectura", "Lee en voz alta sobre la carroza.", "Medio", "Dicción R y RR."));
+        listaDefinida.add(new Ejercicio("6.1", "Trabalenguas: El Moro", "Trabalenguas", "Repite el trabalenguas del Moro.", "Medio", "Agilidad lingual."));
+        listaDefinida.add(new Ejercicio("6.2", "Trabalenguas: El Amor", "Trabalenguas", "Repite el trabalenguas del Amor.", "Medio", "Velocidad."));
+        listaDefinida.add(new Ejercicio("6.3", "Trabalenguas: El Burro", "Trabalenguas", "Repite el trabalenguas del Burro.", "Medio", "Precisión."));
+        listaDefinida.add(new Ejercicio("6.4", "Trabalenguas: Guitarra", "Trabalenguas", "Repite el trabalenguas de la guitarra.", "Alto", "Vibración lingual."));
+        listaDefinida.add(new Ejercicio("6.5", "Trabalenguas: Parra", "Trabalenguas", "Repite el trabalenguas de Parra.", "Alto", "Diferenciación."));
+        listaDefinida.add(new Ejercicio("7.1", "Trabalenguas: Ferrocarril", "Trabalenguas", "Repite el trabalenguas del ferrocarril.", "Alto", "Dominio RR."));
+        listaDefinida.add(new Ejercicio("7.2", "Trabalenguas: La Araña", "Trabalenguas", "Repite el trabalenguas de la araña.", "Medio", "R simple."));
+        listaDefinida.add(new Ejercicio("7.3", "Trabalenguas: El Tapón", "Trabalenguas", "Repite el trabalenguas del tapón.", "Medio", "Coordinación."));
+        listaDefinida.add(new Ejercicio("7.4", "Trabalenguas: Rodolfo", "Trabalenguas", "Repite el trabalenguas de Rodolfo.", "Alto", "Diferentes posiciones R."));
+        listaDefinida.add(new Ejercicio("8", "Sopa de Letras: Imágenes R", "Sopa", "Busca nombres de dibujos.", "Bajo", "Vocabulario R."));
+        listaDefinida.add(new Ejercicio("9", "Sopa de Letras: Fonema D", "Sopa", "Busca palabras con D.", "Bajo", "Diferenciación dental."));
+        listaDefinida.add(new Ejercicio("10", "Sopa de Letras: Sinfón TR", "Sopa", "Busca palabras con TR.", "Medio", "Sinfón complejo."));
+        listaDefinida.add(new Ejercicio("11", "Sopa de Letras: Sinfón FR", "Sopa", "Busca palabras con FR.", "Medio", "Sinfón complejo."));
+        listaDefinida.add(new Ejercicio("12", "Relaciona: Letra R", "Relación", "Une imágenes con R.", "Bajo", "Discriminación R."));
+        listaDefinida.add(new Ejercicio("13", "Ruleta de Palabras R", "Juego", "Gira y graba la palabra.", "Medio", "Práctica lúdica."));
+        listaDefinida.add(new Ejercicio("14", "Sílabas RA-RU", "Relación", "Une imagen con su sílaba.", "Bajo", "Asociación sílaba-sonido."));
+        listaDefinida.add(new Ejercicio("15", "R Fuerte vs R Ligera", "Clasificación", "Clasifica por tipo de R.", "Alto", "Contraste fonético."));
+        listaDefinida.add(new Ejercicio("16", "Video Fonema R", "Video", "Observa el video guía original.", "Bajo", "Reconocimiento auditivo."));
+        listaDefinida.add(new Ejercicio("17.1", "Video Fonema R (Variante 1)", "Video", "Observa el video variante 1.", "Bajo", "Articulación avanzada."));
+        listaDefinida.add(new Ejercicio("17.2", "Video Fonema R (erre)", "Video", "Observa el video con erre.mov.", "Bajo", "Práctica fonema erre."));
+        listaDefinida.add(new Ejercicio("17.3", "Video Fonema R (irri)", "Video", "Observa el video con irri.mov.", "Bajo", "Práctica fonema irri."));
+        listaDefinida.add(new Ejercicio("17.4", "Video Fonema R (orro)", "Video", "Observa el video con orro.mov.", "Bajo", "Práctica fonema orro."));
 
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        String nombre = doc.getString("nombre");
-                        String id = doc.getId();
-                        nombresTerapeutas.add(nombre != null ? nombre : "Sin nombre");
-                        idsTerapeutas.add(id);
-                    }
-
-                    if (nombresTerapeutas.isEmpty()) {
-                        Toast.makeText(getContext(), "No hay terapeutas registrados", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-                    builder.setTitle("Asignar a Terapeuta: " + nombreEje);
-
-                    ArrayAdapter<String> adapterDialog = new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, nombresTerapeutas);
-                    builder.setAdapter(adapterDialog, (dialog, which) -> {
-                        String idTerapeuta = idsTerapeutas.get(which);
-                        String nombreTerapeuta = nombresTerapeutas.get(which);
-                        verificarYAsignarEjercicio(idTerapeuta, nombreTerapeuta, logicalId, nombreEje);
-                    });
-
-                    builder.show();
-                })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al cargar terapeutas", Toast.LENGTH_SHORT).show());
+        WriteBatch batch = db.batch();
+        for (Ejercicio eje : listaDefinida) {
+            batch.set(db.collection("ejercicios").document(eje.getNumeroEjercicio()), eje);
+        }
+        batch.commit().addOnSuccessListener(aVoid -> {
+            Toast.makeText(getContext(), "¡Catálogo Completo Sincronizado! ✓", Toast.LENGTH_SHORT).show();
+        });
     }
 
-    private void verificarYAsignarEjercicio(String idTerapeuta, String nombreTerapeuta, String logicalId, String nombreEje) {
-        db.collection("ejercicios_asignados")
-                .whereEqualTo("idTerapeuta", idTerapeuta)
-                .whereEqualTo("logicalId", logicalId)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        Toast.makeText(getContext(), "¡Aviso! " + nombreTerapeuta + " ya tiene asignado este ejercicio.", Toast.LENGTH_LONG).show();
-                    } else {
-                        realizarAsignacion(idTerapeuta, nombreTerapeuta, logicalId, nombreEje);
-                    }
-                })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al verificar duplicados", Toast.LENGTH_SHORT).show());
+    private void mostrarDialogoTerapeutas(String logId, String nomEje) {
+        db.collection("usuarios").whereEqualTo("tipoUsuario", "Terapeuta").get().addOnSuccessListener(snap -> {
+            List<String> nombres = new ArrayList<>(); List<String> ids = new ArrayList<>();
+            for (QueryDocumentSnapshot doc : snap) {
+                String n = doc.getString("nombre");
+                nombres.add(n != null ? n : "Sin nombre");
+                ids.add(doc.getId());
+            }
+            if (nombres.isEmpty()) { Toast.makeText(getContext(), "No hay terapeutas", Toast.LENGTH_SHORT).show(); return; }
+            new AlertDialog.Builder(getContext()).setTitle("Asignar: " + nomEje).setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, nombres), (d, w) -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("idTerapeuta", ids.get(w)); m.put("nombreTerapeuta", nombres.get(w)); m.put("logicalId", logId); m.put("nombreEjercicio", nomEje); m.put("fechaAsignacion", System.currentTimeMillis());
+                db.collection("ejercicios_asignados").add(m).addOnSuccessListener(u -> Toast.makeText(getContext(), "Asignado correctamente ✓", Toast.LENGTH_SHORT).show());
+            }).show();
+        });
     }
-
-    private void realizarAsignacion(String idTerapeuta, String nombreTerapeuta, String logicalId, String nombreEje) {
-        Map<String, Object> asignacion = new HashMap<>();
-        asignacion.put("idTerapeuta", idTerapeuta);
-        asignacion.put("nombreTerapeuta", nombreTerapeuta);
-        asignacion.put("logicalId", logicalId);
-        asignacion.put("nombreEjercicio", nombreEje);
-        asignacion.put("fechaAsignacion", System.currentTimeMillis());
-
-        db.collection("ejercicios_asignados")
-                .add(asignacion)
-                .addOnSuccessListener(documentReference -> 
-                    Toast.makeText(getContext(), "Asignado correctamente ✓", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> 
-                    Toast.makeText(getContext(), "Error al guardar asignación", Toast.LENGTH_SHORT).show());
-    }
-
-    private void desasignarEjercicio(String documentId) {
-        db.collection("ejercicios_asignados").document(documentId)
-                .delete()
-                .addOnSuccessListener(aVoid -> Toast.makeText(getContext(), "Asignación eliminada ✓", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al eliminar", Toast.LENGTH_SHORT).show());
-    }
-
-    // --- ADAPTADORES ---
 
     private class CatalogoAdapter extends RecyclerView.Adapter<CatalogoAdapter.ViewHolder> {
         private List<Ejercicio> mData;
-        public CatalogoAdapter(List<Ejercicio> data) { this.mData = data; }
-
-        @NonNull
-        @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_catalogo_ejercicio, parent, false);
-            return new ViewHolder(view);
+        public CatalogoAdapter(List<Ejercicio> d) { this.mData = d; }
+        @NonNull @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int t) { return new ViewHolder(LayoutInflater.from(p.getContext()).inflate(R.layout.item_catalogo_ejercicio, p, false)); }
+        @Override public void onBindViewHolder(@NonNull ViewHolder h, int p) {
+            Ejercicio e = mData.get(p);
+            h.tvNom.setText(e.getNombre()); h.tvNum.setText("Número de ejercicio: " + e.getNumeroEjercicio());
+            h.btnAsig.setOnClickListener(v -> mostrarDialogoTerapeutas(e.getNumeroEjercicio(), e.getNombre()));
         }
-
-        @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            Ejercicio eje = mData.get(position);
-            holder.tvNombre.setText(eje.getNombre());
-            holder.tvNumero.setText("Número de ejercicio: " + eje.getNumeroEjercicio());
-            holder.btnAsignar.setOnClickListener(v -> mostrarDialogoTerapeutas(eje.getNumeroEjercicio(), eje.getNombre()));
-        }
-
-        @Override
-        public int getItemCount() { return mData.size(); }
-
-        public class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvNombre, tvNumero;
-            Button btnAsignar;
-            public ViewHolder(@NonNull View itemView) {
-                super(itemView);
-                tvNombre = itemView.findViewById(R.id.tvNombreEjercicioCatalogo);
-                tvNumero = itemView.findViewById(R.id.tvNumeroEjercicioCatalogo);
-                btnAsignar = itemView.findViewById(R.id.btnAsignarEjercicioCatalogo);
-            }
+        @Override public int getItemCount() { return mData.size(); }
+        class ViewHolder extends RecyclerView.ViewHolder {
+            TextView tvNom, tvNum; Button btnAsig;
+            public ViewHolder(@NonNull View v) { super(v); tvNom = v.findViewById(R.id.tvNombreEjercicioCatalogo); tvNum = v.findViewById(R.id.tvNumeroEjercicioCatalogo); btnAsig = v.findViewById(R.id.btnAsignarEjercicioCatalogo); }
         }
     }
 
     private class AsignacionesAdapter extends RecyclerView.Adapter<AsignacionesAdapter.ViewHolder> {
         private List<AsignacionAdmin> mData;
-        public AsignacionesAdapter(List<AsignacionAdmin> data) { this.mData = data; }
-
-        @NonNull
-        @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_asignacion_admin, parent, false);
-            return new ViewHolder(view);
+        public AsignacionesAdapter(List<AsignacionAdmin> d) { this.mData = d; }
+        @NonNull @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int t) { return new ViewHolder(LayoutInflater.from(p.getContext()).inflate(R.layout.item_asignacion_admin, p, false)); }
+        @Override public void onBindViewHolder(@NonNull ViewHolder h, int p) {
+            AsignacionAdmin a = mData.get(p); h.tvEje.setText(a.nombreEjercicio); h.tvTer.setText("Asignado a: " + a.nombreTerapeuta);
+            h.btnQuit.setOnClickListener(v -> db.collection("ejercicios_asignados").document(a.documentId).delete());
         }
-
-        @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            AsignacionAdmin asig = mData.get(position);
-            holder.tvEje.setText(asig.nombreEjercicio);
-            holder.tvTer.setText("Asignado a: " + asig.nombreTerapeuta);
-            holder.btnQuitar.setOnClickListener(v -> {
-                new AlertDialog.Builder(getContext())
-                    .setTitle("Confirmar")
-                    .setMessage("¿Desea quitar este ejercicio a " + asig.nombreTerapeuta + "?")
-                    .setPositiveButton("Sí, quitar", (dialog, which) -> desasignarEjercicio(asig.documentId))
-                    .setNegativeButton("Cancelar", null)
-                    .show();
-            });
-        }
-
-        @Override
-        public int getItemCount() { return mData.size(); }
-
-        public class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvEje, tvTer;
-            Button btnQuitar;
-            public ViewHolder(@NonNull View itemView) {
-                super(itemView);
-                tvEje = itemView.findViewById(R.id.tvEjercicioAsignado);
-                tvTer = itemView.findViewById(R.id.tvTerapeutaAsignado);
-                btnQuitar = itemView.findViewById(R.id.btnDesasignar);
-            }
+        @Override public int getItemCount() { return mData.size(); }
+        class ViewHolder extends RecyclerView.ViewHolder {
+            TextView tvEje, tvTer; Button btnQuit;
+            public ViewHolder(@NonNull View v) { super(v); tvEje = v.findViewById(R.id.tvEjercicioAsignado); tvTer = v.findViewById(R.id.tvTerapeutaAsignado); btnQuit = v.findViewById(R.id.btnDesasignar); }
         }
     }
 
-    public static class AsignacionAdmin {
-        public String documentId; 
-        public String logicalId;
-        public String nombreEjercicio;
-        public String idTerapeuta;
-        public String nombreTerapeuta;
-        public long fechaAsignacion;
-        public AsignacionAdmin() {}
-    }
-
-    private void sincronizarEjercicios() {
-        List<Ejercicio> listaDefinida = new ArrayList<>();
-        listaDefinida.add(new Ejercicio("1", "Pronunciación Inicial R", "Pronunciación", "Identifica y pronuncia imágenes que comienzan con R.", "Bajo", "Mejorar la articulación de la R al inicio de las palabras."));
-        listaDefinida.add(new Ejercicio("2", "Arrastra la R", "Discriminación Visual", "Arrastra las imágenes que empiezan con R al centro.", "Bajo", "Identificar palabras que inician con el fonema R."));
-        listaDefinida.add(new Ejercicio("3", "Lectura: El Tesoro de Teresa", "Lectura", "Lee en voz alta la historia de Teresa.", "Medio", "Fluidez lectora y pronunciación de la R suave."));
-        listaDefinida.add(new Ejercicio("4", "Lectura: Raúl y el Ferrocarril", "Lectura", "Lee en voz alta la historia de Raúl.", "Medio", "Práctica de la R fuerte en lectura corrida."));
-        listaDefinida.add(new Ejercicio("5", "Lectura: Curro y Tarro", "Lectura", "Lee en voz alta la historia de la carroza abandonada.", "Medio", "Mejorar la dicción de palabras con R y RR."));
-        listaDefinida.add(new Ejercicio("6.1", "Trabalenguas: El Moro", "Trabalenguas", "Escucha y repite el trabalenguas del Moro.", "Medio", "Agilidad lingual con fonemas vibrantes."));
-        listaDefinida.add(new Ejercicio("6.2", "Trabalenguas: El Amor", "Trabalenguas", "Escucha y repite el trabalenguas del Amor.", "Medio", "Mejorar la velocidad de articulación."));
-        listaDefinida.add(new Ejercicio("6.3", "Trabalenguas: El Burro", "Trabalenguas", "Escucha y repite el trabalenguas del Burro y los berros.", "Medio", "Precisión articulatoria en fonemas similares."));
-        listaDefinida.add(new Ejercicio("6.4", "Trabalenguas: Guitarra y Barril", "Trabalenguas", "Escucha y repite el trabalenguas de la guitarra.", "Alto", "Control de la vibración lingual múltiple."));
-        listaDefinida.add(new Ejercicio("6.5", "Trabalenguas: Parra y Perra", "Trabalenguas", "Escucha y repite el trabalenguas de Parra.", "Alto", "Diferenciación fonética en contextos rápidos."));
-        listaDefinida.add(new Ejercicio("7.1", "Trabalenguas: Ferrocarril", "Trabalenguas", "Escucha y repite el trabalenguas del ferrocarril.", "Alto", "Dominio de la RR múltiple."));
-        listaDefinida.add(new Ejercicio("7.2", "Trabalenguas: La Araña", "Trabalenguas", "Escucha y repite el trabalenguas de la araña.", "Medio", "Fluidez en fonemas vibrantes simples."));
-        listaDefinida.add(new Ejercicio("7.3", "Trabalenguas: El Tapón", "Trabalenguas", "Escucha y repite el trabalenguas del tapón.", "Medio", "Coordinación motora oral."));
-        listaDefinida.add(new Ejercicio("7.4", "Trabalenguas: Rodolfo el Cerrajero", "Trabalenguas", "Escucha y repite el trabalenguas de Rodolfo.", "Alto", "Articulación de la R en diferentes posiciones."));
-        listaDefinida.add(new Ejercicio("8", "Sopa de Letras: Imágenes R", "Sopa de Letras", "Busca en la sopa los nombres de los dibujos que ves.", "Bajo", "Vocabulario y conciencia fonológica de la R."));
-        listaDefinida.add(new Ejercicio("9", "Sopa de Letras: Fonema D", "Sopa de Letras", "Busca palabras que contienen el fonema D.", "Bajo", "Diferenciación de fonemas dentales."));
-        listaDefinida.add(new Ejercicio("10", "Sopa de Letras: Sinfón TR", "Sopa de Letras", "Encuentra palabras que contienen el grupo TR.", "Medio", "Reconocimiento de sinfones complejos."));
-        listaDefinida.add(new Ejercicio("11", "Sopa de Letras: Sinfón FR", "Sopa de Letras", "Encuentra palabras que contienen el grupo FR.", "Medio", "Reconocimiento de sinfones complejos."));
-        listaDefinida.add(new Ejercicio("12", "Relaciona: Letra R", "Relación", "Une las imágenes que contienen R con la letra central.", "Bajo", "Discriminación auditiva de la R."));
-        listaDefinida.add(new Ejercicio("13", "Ruleta de Palabras R", "Juego", "Gira la ruleta y graba la palabra indicada.", "Medio", "Práctica lúdica de pronunciación."));
-        listaDefinida.add(new Ejercicio("14", "Sílabas RA-RU", "Relación", "Coloca la imagen frente a su sílaba inicial.", "Bajo", "Asociación de sílabas con sonidos iniciales."));
-        listaDefinida.add(new Ejercicio("15", "R Fuerte vs R Ligera", "Clasificación", "Clasifica imágenes según el sonido de su R.", "Alto", "Diferenciación entre R fuerte y R suave."));
-        listaDefinida.add(new Ejercicio("16", "Video Fonema R", "Video", "Observa el video sobre el fonema R.", "Bajo", "Reconocimiento visual y auditivo del fonema R."));
-
-        db.collection("ejercicios").get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                // Aquí podrías agregar lógica para actualizar el catálogo
-                Toast.makeText(getContext(), "Catálogo sincronizado.", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
+    public static class AsignacionAdmin { public String documentId, logicalId, nombreEjercicio, idTerapeuta, nombreTerapeuta; public long fechaAsignacion; public AsignacionAdmin() {} }
 }
