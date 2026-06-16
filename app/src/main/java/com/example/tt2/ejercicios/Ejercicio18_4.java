@@ -99,7 +99,7 @@ public class Ejercicio18_4 extends AppCompatActivity {
     // Dynamic Text variables
     private TextView tvDinamico;
     private int currentTextIndex = 0;
-    private final String[] dynamicTexts = {"ro", "ro", "Ahora di Rosa"};
+    private final String[] dynamicTexts = {"ro", "ro", "Ahora di Rosa", "Ahora di Rojo", "Ahora di, Roca"};
     private final Handler dynamicTextHandler = new Handler(Looper.getMainLooper());
     private final Runnable dynamicTextRunnable = new Runnable() {
         @Override

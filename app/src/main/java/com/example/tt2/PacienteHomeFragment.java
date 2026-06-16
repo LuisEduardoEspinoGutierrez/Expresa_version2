@@ -79,6 +79,7 @@ public class PacienteHomeFragment extends Fragment {
         mostrarFraseAleatoria();
         cargarNombrePaciente();
         cargarEstadisticas();
+        cargarPuntos();
     }
 
     private void mostrarFraseAleatoria() {
@@ -95,6 +96,19 @@ public class PacienteHomeFragment extends Fragment {
                     if (isAdded() && documentSnapshot.exists()) {
                         String nombre = documentSnapshot.getString("nombre");
                         tvHola.setText("¡Hola, " + (nombre != null ? nombre : "amigo") + "!");
+                    }
+                });
+    }
+
+    private void cargarPuntos() {
+        if (currentUserId.equals("anonimo")) return;
+
+        db.collection("usuarios").document(currentUserId)
+                .addSnapshotListener((documentSnapshot, error) -> {
+                    if (error != null) return;
+                    if (isAdded() && documentSnapshot != null && documentSnapshot.exists()) {
+                        Long puntos = documentSnapshot.getLong("puntos");
+                        tvPuntos.setText(String.valueOf(puntos != null ? puntos : 0));
                     }
                 });
     }

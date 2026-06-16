@@ -144,6 +144,7 @@ public class AdministradorEjerciciosFragment extends Fragment {
         listaDefinida.add(new Ejercicio("17.2", "Video Fonema R (erre)", "Video", "Observa el video con erre.mov.", "Bajo", "Práctica fonema erre."));
         listaDefinida.add(new Ejercicio("17.3", "Video Fonema R (irri)", "Video", "Observa el video con irri.mov.", "Bajo", "Práctica fonema irri."));
         listaDefinida.add(new Ejercicio("17.4", "Video Fonema R (orro)", "Video", "Observa el video con orro.mov.", "Bajo", "Práctica fonema orro."));
+        listaDefinida.add(new Ejercicio("18.4", "Video Fonema R (ro)", "Video", "Observa el video con ro.mov.", "Bajo", "Práctica fonema ro."));
 
         WriteBatch batch = db.batch();
         for (Ejercicio eje : listaDefinida) {

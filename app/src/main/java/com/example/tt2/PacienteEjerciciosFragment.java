@@ -264,6 +264,7 @@ public class PacienteEjerciciosFragment extends Fragment {
             case "17.2": activityClass = Ejercicio17_2.class; break;
             case "17.3": activityClass = Ejercicio17_3.class; break;
             case "17.4": activityClass = Ejercicio17_4.class; break;
+            case "18.4": activityClass = Ejercicio18_4.class; break;
         }
 
         if (activityClass != null) {
