@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -12,19 +13,20 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 public class PacienteHomeFragment extends Fragment {
 
+    private static final String TAG = "PacienteHomeFragment";
     private TextView tvHola, tvFrase, tvTerminados, tvEnProgreso, tvPendientes, tvPuntos;
+    private ImageView ivPersonaje, ivEscenarioHeader;
     private ProgressBar progressBar;
     
     private FirebaseFirestore db;
@@ -74,12 +76,15 @@ public class PacienteHomeFragment extends Fragment {
         tvEnProgreso = view.findViewById(R.id.tvEnProgreso);
         tvPendientes = view.findViewById(R.id.tvPendientes);
         tvPuntos = view.findViewById(R.id.tvPuntos);
+        ivPersonaje = view.findViewById(R.id.ivPersonaje);
+        ivEscenarioHeader = view.findViewById(R.id.ivEscenarioHeader);
         progressBar = view.findViewById(R.id.pbHomePaciente);
 
         mostrarFraseAleatoria();
         cargarNombrePaciente();
         cargarEstadisticas();
         cargarPuntos();
+        cargarAparienciaPersonaje();
     }
 
     private void mostrarFraseAleatoria() {
@@ -113,12 +118,135 @@ public class PacienteHomeFragment extends Fragment {
                 });
     }
 
+    private void cargarAparienciaPersonaje() {
+        if (currentUserId.equals("anonimo")) return;
+
+        db.collection("recompensas_pacientes").document(currentUserId)
+                .addSnapshotListener((documentSnapshot, error) -> {
+                    if (error != null) {
+                        Log.e(TAG, "Error escuchando apariencia", error);
+                        return;
+                    }
+                    
+                    if (isAdded() && documentSnapshot != null && documentSnapshot.exists()) {
+                        Map<String, Object> reward1 = (Map<String, Object>) documentSnapshot.get("reward1");
+                        Map<String, Object> reward2 = (Map<String, Object>) documentSnapshot.get("reward2");
+
+                        Timestamp t1 = null, t2 = null;
+                        Map<String, Object> ap1 = null, ap2 = null;
+
+                        if (reward1 != null && reward1.containsKey("apariencia")) {
+                            ap1 = (Map<String, Object>) reward1.get("apariencia");
+                            if (ap1 != null) {
+                                Object ts = ap1.get("ultimo_cambio");
+                                if (ts instanceof Timestamp) t1 = (Timestamp) ts;
+                            }
+                        }
+                        
+                        if (reward2 != null && reward2.containsKey("apariencia")) {
+                            ap2 = (Map<String, Object>) reward2.get("apariencia");
+                            if (ap2 != null) {
+                                Object ts = ap2.get("ultimo_cambio");
+                                if (ts instanceof Timestamp) t2 = (Timestamp) ts;
+                            }
+                        }
+
+                        // Lógica para decidir cuál personaje mostrar basado en el último cambio
+                        if (t1 != null && t2 != null) {
+                            if (t1.compareTo(t2) >= 0) aplicarReward1(ap1);
+                            else aplicarReward2(ap2);
+                        } else if (t1 != null) {
+                            aplicarReward1(ap1);
+                        } else if (t2 != null) {
+                            aplicarReward2(ap2);
+                        } else if (ap1 != null) {
+                            aplicarReward1(ap1);
+                        } else if (ap2 != null) {
+                            aplicarReward2(ap2);
+                        } else {
+                            ivPersonaje.setImageResource(R.drawable.user);
+                            ivEscenarioHeader.setImageResource(R.drawable.bg_terapeuta_header);
+                        }
+                    } else {
+                        ivPersonaje.setImageResource(R.drawable.user);
+                        ivEscenarioHeader.setImageResource(R.drawable.bg_terapeuta_header);
+                    }
+                });
+    }
+
+    private void aplicarReward1(Map<String, Object> ap) {
+        if (ap == null) return;
+        String dinosaurio = (String) ap.get("dinosaurio");
+        String traje = (String) ap.get("traje");
+        String escenario = (String) ap.get("escenario");
+        
+        Log.d(TAG, "Mostrando Reward1: " + dinosaurio + ", traje: " + traje + ", escenario: " + escenario);
+
+        // Aplicar Personaje
+        int resIdPersonaje = R.drawable.user;
+        if ("reward1_din1".equals(dinosaurio)) {
+            if ("conjunto".equals(traje)) resIdPersonaje = R.drawable.reward1_din1_r1;
+            else if ("sudadera".equals(traje)) resIdPersonaje = R.drawable.reward_din1_r2;
+            else resIdPersonaje = R.drawable.reward1_din1;
+        } else if ("reward1_din2".equals(dinosaurio)) {
+            if ("conjunto".equals(traje)) resIdPersonaje = R.drawable.reward1_din2_r1;
+            else if ("sudadera".equals(traje)) resIdPersonaje = R.drawable.reward1_din2_r2;
+            else resIdPersonaje = R.drawable.reward1_din2;
+        } else if ("reward1_din3".equals(dinosaurio)) {
+            if ("conjunto".equals(traje)) resIdPersonaje = R.drawable.reward1_din3_r1;
+            else if ("sudadera".equals(traje)) resIdPersonaje = R.drawable.reward1_din3_r2;
+            else resIdPersonaje = R.drawable.reward1_din3;
+        }
+        ivPersonaje.setImageResource(resIdPersonaje);
+
+        // Aplicar Escenario en el Header
+        int resIdEscenario = R.drawable.bg_terapeuta_header;
+        if ("Esc1".equals(escenario)) resIdEscenario = R.drawable.reward1_esc1;
+        else if ("Esc2".equals(escenario)) resIdEscenario = R.drawable.reward1_esc2;
+        ivEscenarioHeader.setImageResource(resIdEscenario);
+    }
+
+    private void aplicarReward2(Map<String, Object> ap) {
+        if (ap == null) return;
+        String unicornio = (String) ap.get("unicornio");
+        String traje = (String) ap.get("traje");
+        String escenario = (String) ap.get("escenario");
+        
+        Log.d(TAG, "Mostrando Reward2: " + unicornio + ", traje: " + traje + ", escenario: " + escenario);
+
+        // Aplicar Personaje
+        int resIdPersonaje = R.drawable.user;
+        if ("reward2_uni1".equals(unicornio)) {
+            if ("conjunto".equals(traje)) resIdPersonaje = R.drawable.reward2_uni1_r1;
+            else if ("vestido".equals(traje)) resIdPersonaje = R.drawable.reward2_uni1_r2;
+            else resIdPersonaje = R.drawable.reward2_uni1;
+        } else if ("reward2_uni2".equals(unicornio)) {
+            if ("conjunto".equals(traje)) resIdPersonaje = R.drawable.reward2_uni2_r1;
+            else if ("vestido".equals(traje)) resIdPersonaje = R.drawable.reward2_uni2_r2;
+            else resIdPersonaje = R.drawable.reward2_uni2;
+        } else if ("reward2_uni3".equals(unicornio)) {
+            if ("conjunto".equals(traje)) resIdPersonaje = R.drawable.reward2_uni3_r1;
+            else if ("vestido".equals(traje)) resIdPersonaje = R.drawable.reward2_uni3_r2;
+            else resIdPersonaje = R.drawable.reward2_uni3;
+        } else if ("reward2_uni4".equals(unicornio)) {
+            if ("conjunto".equals(traje)) resIdPersonaje = R.drawable.reward2_uni4_r1;
+            else if ("vestido".equals(traje)) resIdPersonaje = R.drawable.reward2_uni4_r2;
+            else resIdPersonaje = R.drawable.reward2_uni4;
+        }
+        ivPersonaje.setImageResource(resIdPersonaje);
+
+        // Aplicar Escenario en el Header
+        int resIdEscenario = R.drawable.bg_terapeuta_header;
+        if ("Esc1".equals(escenario)) resIdEscenario = R.drawable.reward2_esc1_unlocked;
+        else if ("Esc2".equals(escenario)) resIdEscenario = R.drawable.reward2_esc2_unlocked;
+        ivEscenarioHeader.setImageResource(resIdEscenario);
+    }
+
     private void cargarEstadisticas() {
         if (currentUserId.equals("anonimo")) return;
         
         progressBar.setVisibility(View.VISIBLE);
 
-        // Primero obtenemos los ejercicios asignados para saber el total y los pendientes
         db.collection("pacientes_ejercicios")
                 .whereEqualTo("idPaciente", currentUserId)
                 .get()
@@ -130,7 +258,6 @@ public class PacienteHomeFragment extends Fragment {
                         if (logId != null) ejerciciosAsignados.put(logId, true);
                     }
 
-                    // Luego obtenemos el progreso para clasificar
                     db.collection("progreso_ejercicios")
                             .whereEqualTo("idPaciente", currentUserId)
                             .get()
@@ -142,7 +269,6 @@ public class PacienteHomeFragment extends Fragment {
                                     String logId = doc.getString("logicalId");
                                     Long porcentaje = doc.getLong("porcentaje");
                                     
-                                    // Solo contamos si el ejercicio está asignado
                                     if (logId != null && ejerciciosAsignados.containsKey(logId)) {
                                         if (porcentaje != null) {
                                             if (porcentaje >= 100) {
