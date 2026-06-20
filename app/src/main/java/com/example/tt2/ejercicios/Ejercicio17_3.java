@@ -50,6 +50,9 @@ import com.example.tt2.R;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
@@ -134,6 +137,9 @@ public class Ejercicio17_3 extends AppCompatActivity {
     private FirebaseStorage storage;
     private FirebaseAuth mAuth;
 
+    private String idAsignacionActual = "";
+    private boolean isDataLoaded = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -150,7 +156,29 @@ public class Ejercicio17_3 extends AppCompatActivity {
         
         cameraExecutor = Executors.newSingleThreadExecutor();
         
+        cargarAsignacion();
         checkExerciseStatus();
+    }
+
+    private void cargarAsignacion() {
+        if (mAuth.getCurrentUser() == null) {
+            isDataLoaded = true;
+            return;
+        }
+        String userId = mAuth.getCurrentUser().getUid();
+        db.collection("pacientes_ejercicios")
+                .whereEqualTo("idPaciente", userId)
+                .whereEqualTo("logicalId", "17.3")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        idAsignacionActual = queryDocumentSnapshots.getDocuments().get(0).getId();
+                    }
+                    isDataLoaded = true;
+                })
+                .addOnFailureListener(e -> {
+                    isDataLoaded = true;
+                });
     }
 
     private void setupWindowInsets() {
@@ -522,10 +550,58 @@ public class Ejercicio17_3 extends AppCompatActivity {
         StorageReference storageRef = storage.getReference().child("videos/ejercicio17.3/" + fileName);
         storageRef.putFile(videoUri)
                 .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl()
-                        .addOnSuccessListener(this::saveToFirestore))
+                        .addOnSuccessListener(this::procesarFinalizacionConRecompensa))
                 .addOnFailureListener(e -> {
                     btnSubir.setEnabled(true);
                     Toast.makeText(Ejercicio17_3.this, "Error al subir video: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void procesarFinalizacionConRecompensa(Uri downloadUri) {
+        if (mAuth.getCurrentUser() == null || !isDataLoaded || idAsignacionActual.isEmpty()) {
+            saveToFirestore(downloadUri);
+            return;
+        }
+
+        String userId = mAuth.getCurrentUser().getUid();
+
+        db.runTransaction(transaction -> {
+            DocumentReference asigRef = db.collection("pacientes_ejercicios").document(idAsignacionActual);
+            DocumentReference userRef = db.collection("usuarios").document(userId);
+
+            DocumentSnapshot asigSnap = transaction.get(asigRef);
+            Boolean entregada = asigSnap.getBoolean("recompensaEntregada");
+
+            if (entregada == null || !entregada) {
+                transaction.update(asigRef, "recompensaEntregada", true);
+                transaction.update(userRef, "puntos", FieldValue.increment(5));
+                return true;
+            }
+            return false;
+        }).addOnSuccessListener(recompensaOtorgada -> {
+            if (recompensaOtorgada) {
+                mostrarToastConPuntos("¡Felicidades! Has ganado 5 puntos. Ahora tienes ");
+            } else {
+                mostrarToastConPuntos("¡Excelente trabajo! Recuerda que ya tienes ");
+            }
+            saveToFirestore(downloadUri);
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error en transacción de recompensa", e);
+            saveToFirestore(downloadUri);
+        });
+    }
+
+    private void mostrarToastConPuntos(String mensajeBase) {
+        if (mAuth.getCurrentUser() == null) return;
+        String userId = mAuth.getCurrentUser().getUid();
+        db.collection("usuarios").document(userId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Long puntos = 0L;
+                    if (documentSnapshot.exists()) {
+                        puntos = documentSnapshot.getLong("puntos");
+                        if (puntos == null) puntos = 0L;
+                    }
+                    Toast.makeText(getApplicationContext(), mensajeBase + puntos + " puntos en recompensas.", Toast.LENGTH_LONG).show();
                 });
     }
 

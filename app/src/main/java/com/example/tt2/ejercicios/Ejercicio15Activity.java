@@ -21,6 +21,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.tt2.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
@@ -50,6 +53,9 @@ public class Ejercicio15Activity extends AppCompatActivity {
     private final String numeroEjercicio = "15";
     private FirebaseFirestore db;
     private List<Integer> idsCompletados = new ArrayList<>();
+
+    private String idAsignacionActual = "";
+    private boolean isDataLoaded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,9 +105,7 @@ public class Ejercicio15Activity extends AppCompatActivity {
 
         btnFinalizar.setOnClickListener(v -> {
             if (totalAciertos == TOTAL_ITEMS) {
-                guardarProgreso();
-                Toast.makeText(this, "Ejercicio guardado correctamente", Toast.LENGTH_LONG).show();
-                finish();
+                procesarFinalizacionConRecompensa();
             } else {
                 Toast.makeText(this, "Aún faltan imágenes por completar", Toast.LENGTH_SHORT).show();
                 reproducirAudio(R.raw.no_has_terminado);
@@ -115,11 +119,36 @@ public class Ejercicio15Activity extends AppCompatActivity {
             }
         });
 
-        cargarProgreso();
+        cargarAsignacionYProgreso();
+    }
+
+    private void cargarAsignacionYProgreso() {
+        if (usuarioID.equals("anonimo")) {
+            isDataLoaded = true;
+            setupGame();
+            return;
+        }
+
+        db.collection("pacientes_ejercicios")
+                .whereEqualTo("idPaciente", usuarioID)
+                .whereEqualTo("logicalId", numeroEjercicio)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        idAsignacionActual = queryDocumentSnapshots.getDocuments().get(0).getId();
+                        Log.d(TAG, "Asignación actual: " + idAsignacionActual);
+                    }
+                    cargarProgreso();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error obteniendo asignación", e);
+                    cargarProgreso();
+                });
     }
 
     private void cargarProgreso() {
         if (usuarioID.equals("anonimo")) {
+            isDataLoaded = true;
             setupGame();
             return;
         }
@@ -132,14 +161,18 @@ public class Ejercicio15Activity extends AppCompatActivity {
                         List<Long> ids = (List<Long>) documentSnapshot.get("idsCompletados");
                         if (ids != null) {
                             for (Long idLong : ids) {
-                                idsCompletados.add(idLong.intValue());
+                                if (!idsCompletados.contains(idLong.intValue())) {
+                                    idsCompletados.add(idLong.intValue());
+                                }
                             }
                         }
                     }
+                    isDataLoaded = true;
                     setupGame();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error cargando progreso", e);
+                    isDataLoaded = true;
                     setupGame();
                 });
     }
@@ -155,12 +188,60 @@ public class Ejercicio15Activity extends AppCompatActivity {
         progreso.put("porcentaje", porcentaje);
         progreso.put("idsCompletados", idsCompletados);
         progreso.put("completado", totalAciertos == TOTAL_ITEMS);
+        progreso.put("ultimaModificacion", System.currentTimeMillis());
 
         db.collection("progreso_ejercicios")
                 .document(usuarioID + "_" + numeroEjercicio)
                 .set(progreso, SetOptions.merge())
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "Progreso guardado"))
                 .addOnFailureListener(e -> Log.e(TAG, "Error al guardar progreso", e));
+    }
+
+    private void procesarFinalizacionConRecompensa() {
+        if (usuarioID.equals("anonimo") || !isDataLoaded || idAsignacionActual.isEmpty()) {
+            guardarProgreso();
+            finish();
+            return;
+        }
+
+        db.runTransaction(transaction -> {
+            DocumentReference asigRef = db.collection("pacientes_ejercicios").document(idAsignacionActual);
+            DocumentReference userRef = db.collection("usuarios").document(usuarioID);
+
+            DocumentSnapshot asigSnap = transaction.get(asigRef);
+            Boolean entregada = asigSnap.getBoolean("recompensaEntregada");
+
+            if (entregada == null || !entregada) {
+                transaction.update(asigRef, "recompensaEntregada", true);
+                transaction.update(userRef, "puntos", FieldValue.increment(5));
+                return true;
+            }
+            return false;
+        }).addOnSuccessListener(recompensaOtorgada -> {
+            guardarProgreso();
+            if (recompensaOtorgada) {
+                mostrarToastConPuntos("¡Felicidades! Has ganado 5 puntos. Ahora tienes ");
+            } else {
+                mostrarToastConPuntos("¡Excelente trabajo! Recuerda que ya tienes ");
+            }
+            finish();
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error en transacción de recompensa", e);
+            guardarProgreso();
+            finish();
+        });
+    }
+
+    private void mostrarToastConPuntos(String mensajeBase) {
+        db.collection("usuarios").document(usuarioID).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Long puntos = 0L;
+                    if (documentSnapshot.exists()) {
+                        puntos = documentSnapshot.getLong("puntos");
+                        if (puntos == null) puntos = 0L;
+                    }
+                    Toast.makeText(Ejercicio15Activity.this, mensajeBase + puntos + " puntos en recompensas.", Toast.LENGTH_LONG).show();
+                });
     }
 
     private void mostrarConfirmacionSalida() {
@@ -283,7 +364,9 @@ public class Ejercicio15Activity extends AppCompatActivity {
                     draggedView.setOnClickListener(v1 -> reproducirAudio(item.audioRes));
 
                     totalAciertos++;
-                    idsCompletados.add(item.imgRes);
+                    if (!idsCompletados.contains(item.imgRes)) {
+                        idsCompletados.add(item.imgRes);
+                    }
                     itemActual = null;
 
                     reproducirAudio(R.raw.muy_bien);

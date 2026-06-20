@@ -16,6 +16,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.tt2.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
@@ -42,6 +45,10 @@ public class Ejercicio2Activity extends AppCompatActivity {
     private final Queue<Integer> audioQueue = new LinkedList<>();
     private boolean isPlaying = false;
     private GridLayout grid;
+    
+    private String idAsignacionActual = "";
+    private boolean isDataLoaded = false;
+    private Button btnFinalizar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,12 +78,10 @@ public class Ejercicio2Activity extends AppCompatActivity {
             }
         });
 
-        Button btnFinalizar = findViewById(R.id.btnFinalizarEje02);
+        btnFinalizar = findViewById(R.id.btnFinalizarEje02);
         btnFinalizar.setOnClickListener(v -> {
             if (aciertos == TOTAL_CORRECTAS) {
-                guardarProgreso();
-                Toast.makeText(this, "Ejercicio guardado correctamente", Toast.LENGTH_LONG).show();
-                finish();
+                procesarFinalizacionConRecompensa();
             } else {
                 Toast.makeText(this, "Aún faltan imágenes por completar", Toast.LENGTH_SHORT).show();
                 reproducirAudio(R.raw.no_has_terminado);
@@ -111,15 +116,36 @@ public class Ejercicio2Activity extends AppCompatActivity {
             }
         });
 
-        cargarProgreso();
+        cargarDatos();
     }
 
-    private void cargarProgreso() {
+    private void cargarDatos() {
         if (usuarioID.equals("anonimo")) {
+            isDataLoaded = true;
             inicializarImagenes();
             return;
         }
 
+        // 1. Obtener la asignación actual para este ejercicio
+        db.collection("pacientes_ejercicios")
+                .whereEqualTo("idPaciente", usuarioID)
+                .whereEqualTo("logicalId", numeroEjercicio)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        idAsignacionActual = queryDocumentSnapshots.getDocuments().get(0).getId();
+                        Log.d(TAG, "Asignación actual: " + idAsignacionActual);
+                    }
+                    // 2. Cargar el progreso de las imágenes
+                    cargarProgreso();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error obteniendo asignación", e);
+                    cargarProgreso();
+                });
+    }
+
+    private void cargarProgreso() {
         db.collection("progreso_ejercicios")
                 .document(usuarioID + "_" + numeroEjercicio)
                 .get()
@@ -131,16 +157,19 @@ public class Ejercicio2Activity extends AppCompatActivity {
                             if (estados != null) {
                                 estadosCompletados = estados;
                                 // Contar cuántos están ya completados
+                                aciertos = 0;
                                 for (Boolean completado : estadosCompletados.values()) {
                                     if (completado) aciertos++;
                                 }
                             }
                         }
                     }
+                    isDataLoaded = true;
                     inicializarImagenes();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error cargando progreso", e);
+                    isDataLoaded = true;
                     inicializarImagenes();
                 });
     }
@@ -183,7 +212,7 @@ public class Ejercicio2Activity extends AppCompatActivity {
     }
 
     private void guardarProgreso() {
-        if (usuarioID.equals("anonimo")) return;
+        if (usuarioID.equals("anonimo") || !isDataLoaded) return;
 
         int porcentaje = (aciertos * 100) / TOTAL_CORRECTAS;
 
@@ -199,6 +228,62 @@ public class Ejercicio2Activity extends AppCompatActivity {
                 .set(progreso, SetOptions.merge())
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "Progreso guardado"))
                 .addOnFailureListener(e -> Log.e(TAG, "Error al guardar progreso", e));
+    }
+
+    private void procesarFinalizacionConRecompensa() {
+        if (usuarioID.equals("anonimo") || !isDataLoaded || idAsignacionActual.isEmpty()) {
+            Toast.makeText(this, "¡Felicidades, has terminado el ejercicio!", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        btnFinalizar.setEnabled(false);
+
+        // Usar una transacción para asegurar que la recompensa se de una sola vez por asignación específica
+        db.runTransaction(transaction -> {
+            DocumentReference asigRef = db.collection("pacientes_ejercicios").document(idAsignacionActual);
+            DocumentReference userRef = db.collection("usuarios").document(usuarioID);
+
+            DocumentSnapshot asigSnap = transaction.get(asigRef);
+            Boolean entregada = asigSnap.getBoolean("recompensaEntregada");
+
+            if (entregada == null || !entregada) {
+                // No se ha entregado, la marcamos y sumamos puntos
+                transaction.update(asigRef, "recompensaEntregada", true);
+                transaction.update(userRef, "puntos", FieldValue.increment(5));
+                return true; // Recompensa otorgada ahora
+            }
+            return false; // Ya se había otorgado
+        }).addOnSuccessListener(recompensaOtorgada -> {
+            guardarProgreso();
+            if (recompensaOtorgada) {
+                mostrarToastConPuntos("¡Felicidades! Has ganado 5 puntos. Ahora tienes ");
+            } else {
+                mostrarToastConPuntos("¡Excelente trabajo! Recuerda que ya tienes ");
+            }
+        }).addOnFailureListener(e -> {
+            btnFinalizar.setEnabled(true);
+            Log.e(TAG, "Error en transacción de recompensa", e);
+            Toast.makeText(this, "Error al procesar recompensa", Toast.LENGTH_SHORT).show();
+            finish();
+        });
+    }
+
+    private void mostrarToastConPuntos(String mensajeBase) {
+        db.collection("usuarios").document(usuarioID).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Long puntos = 0L;
+                    if (documentSnapshot.exists()) {
+                        puntos = documentSnapshot.getLong("puntos");
+                        if (puntos == null) puntos = 0L;
+                    }
+                    Toast.makeText(Ejercicio2Activity.this, mensajeBase + puntos + " puntos en recompensas.", Toast.LENGTH_LONG).show();
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(Ejercicio2Activity.this, "¡Felicidades, has terminado el ejercicio!", Toast.LENGTH_LONG).show();
+                    finish();
+                });
     }
 
     private void mostrarConfirmacionSalida() {

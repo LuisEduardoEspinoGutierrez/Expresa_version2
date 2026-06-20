@@ -33,7 +33,11 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.tt2.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -43,6 +47,7 @@ import java.util.Map;
 
 public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickListener {
 
+    private static final String TAG = "Ejercicio06_5";
     private ImageView ivRegresarEje065;
     private TextView tvLecturaEje065;
     private Button btnAudioInstruccionesEje065, btnAudioTrabalenguasEje065, btnGrabarEje065, btnDetenerEje065, btnSubirEje065;
@@ -57,9 +62,13 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
 
     private String filePath;
     private String usuarioID;
-    private final String numeroEjercicio = "6_5";
+    private final String numeroEjercicio = "6.5";
     private boolean isUploaded = false;
     private boolean isRecording = false;
+
+    private String idAsignacionActual = "";
+    private boolean isDataLoaded = false;
+    private FirebaseFirestore db;
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
@@ -93,6 +102,7 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_ejercicio065);
 
+        db = FirebaseFirestore.getInstance();
         usuarioID = FirebaseAuth.getInstance().getCurrentUser() != null
                 ? FirebaseAuth.getInstance().getCurrentUser().getUid()
                 : "anonimo";
@@ -137,7 +147,7 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
         btnSubirEje065.setOnClickListener(this);
         btnPlayRecordedEje065.setOnClickListener(this);
 
-        checkExistingProgress();
+        cargarAsignacionYProgreso();
     }
 
     private void configurarTexto() {
@@ -153,9 +163,35 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
         tvLecturaEje065.setText(spannable);
     }
 
+    private void cargarAsignacionYProgreso() {
+        if (usuarioID.equals("anonimo")) {
+            isDataLoaded = true;
+            return;
+        }
+
+        db.collection("pacientes_ejercicios")
+                .whereEqualTo("idPaciente", usuarioID)
+                .whereEqualTo("logicalId", numeroEjercicio)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        idAsignacionActual = queryDocumentSnapshots.getDocuments().get(0).getId();
+                        Log.d(TAG, "Asignación actual: " + idAsignacionActual);
+                    }
+                    checkExistingProgress();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error obteniendo asignación", e);
+                    checkExistingProgress();
+                });
+    }
+
     private void checkExistingProgress() {
-        if (usuarioID.equals("anonimo")) return;
-        FirebaseFirestore.getInstance().collection("progreso_ejercicios")
+        if (usuarioID.equals("anonimo")) {
+            isDataLoaded = true;
+            return;
+        }
+        db.collection("progreso_ejercicios")
                 .document(usuarioID + "_" + numeroEjercicio)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
@@ -167,6 +203,11 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
                             btnGrabarEje065.setText("Completado");
                         }
                     }
+                    isDataLoaded = true;
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error cargando progreso", e);
+                    isDataLoaded = true;
                 });
     }
 
@@ -266,7 +307,7 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
                     pbUploadEje065.setVisibility(View.GONE);
                     btnGrabarEje065.setText("Completado");
                     Toast.makeText(this, "Audio subido al 100% ✓", Toast.LENGTH_LONG).show();
-                    actualizarProgresoFirestore();
+                    procesarFinalizacionConRecompensa();
                 })
                 .addOnFailureListener(e -> {
                     btnSubirEje065.setEnabled(true);
@@ -276,16 +317,63 @@ public class Ejercicio06_5 extends AppCompatActivity implements View.OnClickList
                 });
     }
 
+    private void procesarFinalizacionConRecompensa() {
+        if (usuarioID.equals("anonimo") || !isDataLoaded || idAsignacionActual.isEmpty()) {
+            actualizarProgresoFirestore();
+            return;
+        }
+
+        db.runTransaction(transaction -> {
+            DocumentReference asigRef = db.collection("pacientes_ejercicios").document(idAsignacionActual);
+            DocumentReference userRef = db.collection("usuarios").document(usuarioID);
+
+            DocumentSnapshot asigSnap = transaction.get(asigRef);
+            Boolean entregada = asigSnap.getBoolean("recompensaEntregada");
+
+            if (entregada == null || !entregada) {
+                transaction.update(asigRef, "recompensaEntregada", true);
+                transaction.update(userRef, "puntos", FieldValue.increment(5));
+                return true;
+            }
+            return false;
+        }).addOnSuccessListener(recompensaOtorgada -> {
+            actualizarProgresoFirestore();
+            if (recompensaOtorgada) {
+                mostrarToastConPuntos("¡Felicidades! Has ganado 5 puntos. Ahora tienes ");
+            } else {
+                mostrarToastConPuntos("¡Excelente trabajo! Recuerda que ya tienes ");
+            }
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error en transacción de recompensa", e);
+            actualizarProgresoFirestore();
+        });
+    }
+
+    private void mostrarToastConPuntos(String mensajeBase) {
+        db.collection("usuarios").document(usuarioID).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Long puntos = 0L;
+                    if (documentSnapshot.exists()) {
+                        puntos = documentSnapshot.getLong("puntos");
+                        if (puntos == null) puntos = 0L;
+                    }
+                    Toast.makeText(Ejercicio06_5.this, mensajeBase + puntos + " puntos en recompensas.", Toast.LENGTH_LONG).show();
+                });
+    }
+
     private void actualizarProgresoFirestore() {
         if (usuarioID.equals("anonimo")) return;
         Map<String, Object> progreso = new HashMap<>();
         progreso.put("idPaciente", usuarioID);
-        progreso.put("logicalId", "6.5");
+        progreso.put("logicalId", numeroEjercicio);
         progreso.put("porcentaje", 100);
+        progreso.put("completado", true);
         progreso.put("ultimaModificacion", System.currentTimeMillis());
-        FirebaseFirestore.getInstance().collection("progreso_ejercicios")
-                .document(usuarioID + "_6.5")
-                .set(progreso);
+        db.collection("progreso_ejercicios")
+                .document(usuarioID + "_" + numeroEjercicio)
+                .set(progreso, SetOptions.merge())
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Progreso actualizado"))
+                .addOnFailureListener(e -> Log.e(TAG, "Error al actualizar progreso", e));
     }
 
     private void reproducirAudios(int... audios){

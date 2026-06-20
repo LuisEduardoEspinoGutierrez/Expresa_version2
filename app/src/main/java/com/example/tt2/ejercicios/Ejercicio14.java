@@ -19,6 +19,9 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.tt2.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
@@ -38,7 +41,7 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
             eje14_ru, eje14_burro, eje14_pajaro, eje14_rueda;
     Button btnAudioInstruccionesEje14, btnFinalizarEje14;
     private int aciertos = 0;
-    private final int TOTAL_ACIERTOS = 6;
+    private final int TOTAL_ACIERTOS = 5;
     MediaPlayer mp;
     private MediaPlayer mediaPlayerInstrucciones;
 
@@ -46,6 +49,9 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
     private final String numeroEjercicio = "14";
     private FirebaseFirestore db;
     private List<Integer> idsEncontrados = new ArrayList<>();
+
+    private String idAsignacionActual = "";
+    private boolean isDataLoaded = false;
 
     @Override
     protected void onDestroy() {
@@ -123,7 +129,7 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
         configurarDrag(eje14_reloj, "re", R.raw.audio_reloj_eje14);
         configurarDrag(eje14_emoji, "ri", R.raw.audio_risa_eje14);
         configurarDrag(eje14_robot, "ro", R.raw.audio_robot_eje14);
-        configurarDrag(eje14_burro, "ru", R.raw.audio_burro_eje14);
+        // INCORRECTAS configurarDrag(eje14_burro, "ru", R.raw.audio_burro_eje14);
         configurarDrag(eje14_rueda, "ru", R.raw.audio_rueda_eje14);
 
 
@@ -137,6 +143,7 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
         configurarDrag(eje14_sombrero, "incorrecta", R.raw.audio_sombrero_eje14);
         configurarDrag(eje14_carta, "incorrecta", R.raw.audio_carta_eje14);
         configurarDrag(eje14_pajaro, "incorrecta", R.raw.audio_pajaro_eje14);
+        configurarDrag(eje14_burro, "incorrecta", R.raw.audio_burro_eje14);
 
         eje14_ra.setOnDragListener(dragListener);
         eje14_re.setOnDragListener(dragListener);
@@ -151,11 +158,37 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
             }
         });
 
-        cargarProgreso();
+        cargarAsignacionYProgreso();
+    }
+
+    private void cargarAsignacionYProgreso() {
+        if (usuarioID.equals("anonimo")) {
+            isDataLoaded = true;
+            return;
+        }
+
+        db.collection("pacientes_ejercicios")
+                .whereEqualTo("idPaciente", usuarioID)
+                .whereEqualTo("logicalId", numeroEjercicio)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        idAsignacionActual = queryDocumentSnapshots.getDocuments().get(0).getId();
+                        Log.d(TAG, "Asignación actual: " + idAsignacionActual);
+                    }
+                    cargarProgreso();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error obteniendo asignación", e);
+                    cargarProgreso();
+                });
     }
 
     private void cargarProgreso() {
-        if (usuarioID.equals("anonimo")) return;
+        if (usuarioID.equals("anonimo")) {
+            isDataLoaded = true;
+            return;
+        }
         db.collection("progreso_ejercicios")
                 .document(usuarioID + "_" + numeroEjercicio)
                 .get()
@@ -165,15 +198,21 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
                         if (ids != null) {
                             for (Long idLong : ids) {
                                 int id = idLong.intValue();
-                                idsEncontrados.add(id);
+                                if (!idsEncontrados.contains(id)) {
+                                    idsEncontrados.add(id);
+                                }
                                 View v = findViewById(id);
                                 if (v != null) v.setVisibility(View.INVISIBLE);
                             }
                             aciertos = idsEncontrados.size();
                         }
                     }
+                    isDataLoaded = true;
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "Error cargando progreso", e));
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error cargando progreso", e);
+                    isDataLoaded = true;
+                });
     }
 
     private void guardarProgreso() {
@@ -185,12 +224,60 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
         progreso.put("porcentaje", porcentaje);
         progreso.put("idsEncontrados", idsEncontrados);
         progreso.put("completado", aciertos == TOTAL_ACIERTOS);
+        progreso.put("ultimaModificacion", System.currentTimeMillis());
 
         db.collection("progreso_ejercicios")
                 .document(usuarioID + "_" + numeroEjercicio)
                 .set(progreso, SetOptions.merge())
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "Progreso guardado"))
                 .addOnFailureListener(e -> Log.e(TAG, "Error al guardar progreso", e));
+    }
+
+    private void procesarFinalizacionConRecompensa() {
+        if (usuarioID.equals("anonimo") || !isDataLoaded || idAsignacionActual.isEmpty()) {
+            guardarProgreso();
+            finish();
+            return;
+        }
+
+        db.runTransaction(transaction -> {
+            DocumentReference asigRef = db.collection("pacientes_ejercicios").document(idAsignacionActual);
+            DocumentReference userRef = db.collection("usuarios").document(usuarioID);
+
+            DocumentSnapshot asigSnap = transaction.get(asigRef);
+            Boolean entregada = asigSnap.getBoolean("recompensaEntregada");
+
+            if (entregada == null || !entregada) {
+                transaction.update(asigRef, "recompensaEntregada", true);
+                transaction.update(userRef, "puntos", FieldValue.increment(5));
+                return true;
+            }
+            return false;
+        }).addOnSuccessListener(recompensaOtorgada -> {
+            guardarProgreso();
+            if (recompensaOtorgada) {
+                mostrarToastConPuntos("¡Felicidades! Has ganado 5 puntos. Ahora tienes ");
+            } else {
+                mostrarToastConPuntos("¡Excelente trabajo! Recuerda que ya tienes ");
+            }
+            finish();
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error en transacción de recompensa", e);
+            guardarProgreso();
+            finish();
+        });
+    }
+
+    private void mostrarToastConPuntos(String mensajeBase) {
+        db.collection("usuarios").document(usuarioID).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Long puntos = 0L;
+                    if (documentSnapshot.exists()) {
+                        puntos = documentSnapshot.getLong("puntos");
+                        if (puntos == null) puntos = 0L;
+                    }
+                    Toast.makeText(Ejercicio14.this, mensajeBase + puntos + " puntos en recompensas.", Toast.LENGTH_LONG).show();
+                });
     }
 
     private void mostrarConfirmacionSalida() {
@@ -221,7 +308,9 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
 
             if (silabaImagen.equals(silabaZona)) {
                 imagenArrastrada.setVisibility(View.INVISIBLE);
-                idsEncontrados.add(imagenArrastrada.getId());
+                if (!idsEncontrados.contains(imagenArrastrada.getId())) {
+                    idsEncontrados.add(imagenArrastrada.getId());
+                }
                 aciertos = idsEncontrados.size();
                 guardarProgreso();
 
@@ -299,9 +388,7 @@ public class Ejercicio14 extends AppCompatActivity implements View.OnClickListen
             reproducirAudios(R.raw.audio_ru_eje14);
         } else if (id == R.id.btnFinalizarEje14) {
             if (aciertos == TOTAL_ACIERTOS) {
-                guardarProgreso();
-                Toast.makeText(this, "Ejercicio guardado correctamente", Toast.LENGTH_LONG).show();
-                finish();
+                procesarFinalizacionConRecompensa();
             } else {
                 Toast.makeText(this, "Aún faltan imágenes por completar", Toast.LENGTH_SHORT).show();
                 reproducirAudios(R.raw.no_has_terminado);

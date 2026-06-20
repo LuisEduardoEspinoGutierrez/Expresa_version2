@@ -48,6 +48,9 @@ import com.example.tt2.R;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
@@ -116,6 +119,9 @@ public class Ejercicio16 extends AppCompatActivity {
     private FirebaseStorage storage;
     private FirebaseAuth mAuth;
 
+    private String idAsignacionActual = "";
+    private boolean isDataLoaded = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -131,6 +137,29 @@ public class Ejercicio16 extends AppCompatActivity {
         setupVideoGuide();
         
         cameraExecutor = Executors.newSingleThreadExecutor();
+        
+        cargarAsignacion();
+    }
+
+    private void cargarAsignacion() {
+        if (mAuth.getCurrentUser() == null) {
+            isDataLoaded = true;
+            return;
+        }
+        String userId = mAuth.getCurrentUser().getUid();
+        db.collection("pacientes_ejercicios")
+                .whereEqualTo("idPaciente", userId)
+                .whereEqualTo("logicalId", "16")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        idAsignacionActual = queryDocumentSnapshots.getDocuments().get(0).getId();
+                    }
+                    isDataLoaded = true;
+                })
+                .addOnFailureListener(e -> {
+                    isDataLoaded = true;
+                });
     }
 
     private void setupWindowInsets() {
@@ -164,7 +193,7 @@ public class Ejercicio16 extends AppCompatActivity {
         cardCameraOverlay = findViewById(R.id.cardUserCamera);
         textureViewReproduccion = findViewById(R.id.textureViewUserPlayback);
         tvStatus = findViewById(R.id.tvRecordingStatusUser);
-        
+
         Button btnPlay = findViewById(R.id.btnPlayVideoEje16);
         Button btnPause = findViewById(R.id.btnPauseVideoEje16);
 
@@ -269,18 +298,15 @@ public class Ejercicio16 extends AppCompatActivity {
                 public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
                     setupMediaPlayer(new Surface(surfaceTexture));
                 }
-                @Override
-                public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {}
-                @Override
-                public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
+                @Override public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {}
+                @Override public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
                     if (mediaPlayer != null) {
                         mediaPlayer.release();
                         mediaPlayer = null;
                     }
                     return true;
                 }
-                @Override
-                public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {}
+                @Override public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {}
             });
         }
     }
@@ -372,22 +398,22 @@ public class Ejercicio16 extends AppCompatActivity {
                     if (recordEvent instanceof VideoRecordEvent.Start) {
                         if (btnDetener != null) btnDetener.setEnabled(true);
                         if (tvStatus != null) tvStatus.setVisibility(View.VISIBLE);
-                        
+
                         // Start 30s timeout for automatic stop
                         mainHandler.postDelayed(stopRecordingRunnable, 30000);
-                        
+
                     } else if (recordEvent instanceof VideoRecordEvent.Finalize) {
                         VideoRecordEvent.Finalize finalizeEvent = (VideoRecordEvent.Finalize) recordEvent;
-                        
+
                         // Cancel any pending automatic stop timer
                         mainHandler.removeCallbacks(stopRecordingRunnable);
-                        
+
                         if (!finalizeEvent.hasError()) {
                             lastSavedUri = finalizeEvent.getOutputResults().getOutputUri();
                             Toast.makeText(getBaseContext(), "Grabación finalizada.", Toast.LENGTH_SHORT).show();
-                            
+
                             showRecordedVideo(lastSavedUri);
-                            
+
                             if (btnDetener != null) btnDetener.setVisibility(View.GONE);
                             if (layoutPostGrabacion != null) layoutPostGrabacion.setVisibility(View.VISIBLE);
                         } else {
@@ -463,7 +489,7 @@ public class Ejercicio16 extends AppCompatActivity {
             Toast.makeText(this, "Usuario no autenticado", Toast.LENGTH_SHORT).show();
             return;
         }
-        
+
         btnSubir.setEnabled(false);
         Toast.makeText(this, "Subiendo video...", Toast.LENGTH_SHORT).show();
 
@@ -476,10 +502,58 @@ public class Ejercicio16 extends AppCompatActivity {
 
         storageRef.putFile(videoUri)
                 .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl()
-                        .addOnSuccessListener(this::saveToFirestore))
+                        .addOnSuccessListener(this::procesarFinalizacionConRecompensa))
                 .addOnFailureListener(e -> {
                     btnSubir.setEnabled(true);
                     Toast.makeText(Ejercicio16.this, "Error al subir video: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void procesarFinalizacionConRecompensa(Uri downloadUri) {
+        if (mAuth.getCurrentUser() == null || !isDataLoaded || idAsignacionActual.isEmpty()) {
+            saveToFirestore(downloadUri);
+            return;
+        }
+
+        String userId = mAuth.getCurrentUser().getUid();
+
+        db.runTransaction(transaction -> {
+            DocumentReference asigRef = db.collection("pacientes_ejercicios").document(idAsignacionActual);
+            DocumentReference userRef = db.collection("usuarios").document(userId);
+
+            DocumentSnapshot asigSnap = transaction.get(asigRef);
+            Boolean entregada = asigSnap.getBoolean("recompensaEntregada");
+
+            if (entregada == null || !entregada) {
+                transaction.update(asigRef, "recompensaEntregada", true);
+                transaction.update(userRef, "puntos", FieldValue.increment(5));
+                return true;
+            }
+            return false;
+        }).addOnSuccessListener(recompensaOtorgada -> {
+            if (recompensaOtorgada) {
+                mostrarToastConPuntos("¡Felicidades! Has ganado 5 puntos. Ahora tienes ");
+            } else {
+                mostrarToastConPuntos("¡Excelente trabajo! Recuerda que ya tienes ");
+            }
+            saveToFirestore(downloadUri);
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error en transacción de recompensa", e);
+            saveToFirestore(downloadUri);
+        });
+    }
+
+    private void mostrarToastConPuntos(String mensajeBase) {
+        if (mAuth.getCurrentUser() == null) return;
+        String userId = mAuth.getCurrentUser().getUid();
+        db.collection("usuarios").document(userId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Long puntos = 0L;
+                    if (documentSnapshot.exists()) {
+                        puntos = documentSnapshot.getLong("puntos");
+                        if (puntos == null) puntos = 0L;
+                    }
+                    Toast.makeText(getApplicationContext(), mensajeBase + puntos + " puntos en recompensas.", Toast.LENGTH_LONG).show();
                 });
     }
 
